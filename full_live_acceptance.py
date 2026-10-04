@@ -147,9 +147,48 @@ def local_suite(base,db_path,result):
     controls=['openStructuredCandidate','uploadCandidateDocument','openJobSearch','runBulkAction','cloneJob','publishJob','newAssignment','newPurchaseOrder','newVMSAccount','newSupplier','runOperationalReport','newUDF','newAutomation','newConnector']
     result.check('MAIN_UI_FUNCTIONAL_CONTROLS',all(x in app for x in controls),', '.join(controls))
 
+# R12C_DYNAMIC_LIVE_VERSION
+def source_app_version():
+    server=(ROOT/'server.py').read_text(
+        encoding='utf-8'
+    )
+
+    for line in server.splitlines():
+        line=line.strip()
+
+        if (
+            line.startswith('APP_VERSION')
+            and '=' in line
+        ):
+            return (
+                line.split('=',1)[1]
+                    .strip()
+                    .strip('"')
+                    .strip("'")
+            )
+
+    raise RuntimeError(
+        'APP_VERSION not found in server.py'
+    )
+
+
 def readonly_suite(base,result):
     api=API(base);login=api.login();health=api.req('/api/health');me=api.req('/api/me');candidates=api.req('/api/candidates');jobs=api.req('/api/jobs');search=api.req('/api/search/talent','POST',{'raw_boolean':'Java OR Python','available_before':'','radius_miles':''});matches=api.req('/api/candidates/1/matches')
-    result.check('LIVE_HEALTH_VERSION',login[0]==200 and health[0]==200 and body(health).get('version')=='3.1.0-direct-ui' and body(health).get('persistence') in ('local-sqlite','supabase-storage'))
+    expected_version=source_app_version()
+    actual_version=body(health).get('version')
+    persistence=body(health).get('persistence')
+
+    result.check(
+        'LIVE_HEALTH_VERSION',
+        login[0]==200
+        and health[0]==200
+        and actual_version==expected_version
+        and persistence in (
+            'local-sqlite',
+            'supabase-storage'
+        ),
+        f'actual={actual_version} expected={expected_version} persistence={persistence}'
+    )
     result.check('LIVE_SESSION_READS',me[0]==200 and candidates[0]==200 and jobs[0]==200)
     result.check('LIVE_BOOLEAN_READONLY',search[0]==200 and isinstance(body(search).get('results'),list))
     result.check('LIVE_MATCH_READONLY',matches[0]==200)
