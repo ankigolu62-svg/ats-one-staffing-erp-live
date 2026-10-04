@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 APP_NAME = "ATS One Staffing ERP"
-APP_VERSION = "3.0.0-full"
+APP_VERSION = "3.1.0-direct-ui"
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
 DATA_DIR = BASE_DIR / "data"
@@ -1350,6 +1350,224 @@ class Handler(BaseHTTPRequestHandler):
                     return self._binary(output.getvalue().encode('utf-8-sig'),'text/csv; charset=utf-8',key+'.csv')
                 return self._json({'report_key':key,'count':len(rows),'rows':rows})
             if path=='/api/tenants/current': return self._json(qone(conn,'SELECT * FROM tenants WHERE id=?',(u['tenant_id'],)))
+
+            if path=='/api/search/suggestions':
+                if u['role'] not in RECRUITING_ROLES:
+                    return self._json({'error':'Permission denied'},403)
+
+                kind=(qs.get('kind') or [''])[0].strip().lower()
+                term=(qs.get('q') or [''])[0].strip()
+                profession=(qs.get('profession') or [''])[0].strip()
+
+                try:
+                    limit=min(max(int((qs.get('limit') or ['12'])[0]),1),25)
+                except Exception:
+                    limit=12
+
+                starters={
+                    'profession':[
+                        'Software Engineer','Data Engineer','Cloud Engineer',
+                        'QA / SDET','Business Analyst','Project Manager',
+                        'DevOps Engineer','Security Engineer','Data Scientist',
+                        'Machine Learning Engineer','Registered Nurse',
+                        'Nurse Practitioner','Physician Assistant',
+                        'Recruiter','Product Manager'
+                    ],
+                    'specialty':[
+                        'Backend','Frontend','Full Stack','Java Backend',
+                        'Spring Boot','Microservices','Cloud Platform',
+                        'Data Platform','ETL / ELT','Automation',
+                        'Performance Engineering','Security','Analytics'
+                    ],
+                    'skill':[
+                        'Java','Spring Boot','Microservices','Python',
+                        'PySpark','Databricks','AWS','Azure','GCP',
+                        'SQL','Kafka','React','TypeScript','Kubernetes',
+                        'Terraform','Selenium','REST Assured'
+                    ],
+                    'license':['RN','LPN','LVN','CNA','NP','PA'],
+                    'certification':[
+                        'AWS Certified','Azure Certified','GCP Certified',
+                        'PMP','ACLS','BLS','CKA','Databricks Certified'
+                    ],
+                    'qualification':[
+                        'Bachelors','Masters','MBA','BSN','B.Tech',
+                        'M.Tech','Computer Science','Nursing'
+                    ],
+                    'attribute':[
+                        'Top Candidate','Compact License',
+                        'Available Immediately','Preferred Supplier',
+                        'Security Cleared'
+                    ],
+                    'title':[
+                        'Senior Java Developer','Software Engineer',
+                        'Data Engineer','Cloud Engineer','QA Engineer',
+                        'Business Analyst','Project Manager'
+                    ]
+                }
+
+                if kind not in starters:
+                    return self._json({
+                        'error':'Unsupported suggestion kind',
+                        'supported':sorted(starters)
+                    },400)
+
+                tid=u['tenant_id']
+                values=[]
+
+                def extend_rows(sql,params):
+                    for row in qall(conn,sql,params):
+                        value=(row.get('value') or '').strip()
+                        if value:
+                            values.append(value)
+
+                if kind=='profession':
+                    extend_rows(
+                        '''SELECT profession value
+                           FROM candidates
+                           WHERE tenant_id=? AND profession IS NOT NULL
+                           UNION ALL
+                           SELECT profession value
+                           FROM jobs
+                           WHERE tenant_id=? AND profession IS NOT NULL''',
+                        (tid,tid)
+                    )
+
+                elif kind=='specialty':
+                    if profession:
+                        extend_rows(
+                            '''SELECT specialty value
+                               FROM candidates
+                               WHERE tenant_id=? AND specialty IS NOT NULL
+                                 AND lower(COALESCE(profession,''))=lower(?)
+                               UNION ALL
+                               SELECT specialty value
+                               FROM jobs
+                               WHERE tenant_id=? AND specialty IS NOT NULL
+                                 AND lower(COALESCE(profession,''))=lower(?)''',
+                            (tid,profession,tid,profession)
+                        )
+                    else:
+                        extend_rows(
+                            '''SELECT specialty value
+                               FROM candidates
+                               WHERE tenant_id=? AND specialty IS NOT NULL
+                               UNION ALL
+                               SELECT specialty value
+                               FROM jobs
+                               WHERE tenant_id=? AND specialty IS NOT NULL''',
+                            (tid,tid)
+                        )
+
+                elif kind=='skill':
+                    extend_rows(
+                        '''SELECT skill value
+                           FROM candidate_skills
+                           WHERE tenant_id=? AND skill IS NOT NULL''',
+                        (tid,)
+                    )
+
+                elif kind=='license':
+                    extend_rows(
+                        '''SELECT license_type value
+                           FROM candidate_licenses
+                           WHERE tenant_id=? AND license_type IS NOT NULL''',
+                        (tid,)
+                    )
+
+                elif kind=='certification':
+                    extend_rows(
+                        '''SELECT name value
+                           FROM candidate_certifications
+                           WHERE tenant_id=? AND name IS NOT NULL''',
+                        (tid,)
+                    )
+
+                elif kind=='qualification':
+                    extend_rows(
+                        '''SELECT value
+                           FROM candidate_qualifications
+                           WHERE tenant_id=? AND value IS NOT NULL
+                           UNION ALL
+                           SELECT name value
+                           FROM candidate_qualifications
+                           WHERE tenant_id=? AND name IS NOT NULL''',
+                        (tid,tid)
+                    )
+
+                elif kind=='attribute':
+                    extend_rows(
+                        '''SELECT attribute value
+                           FROM candidate_attributes
+                           WHERE tenant_id=? AND attribute IS NOT NULL''',
+                        (tid,)
+                    )
+
+                elif kind=='title':
+                    extend_rows(
+                        '''SELECT current_title value
+                           FROM candidates
+                           WHERE tenant_id=? AND current_title IS NOT NULL
+                           UNION ALL
+                           SELECT title value
+                           FROM jobs
+                           WHERE tenant_id=? AND title IS NOT NULL''',
+                        (tid,tid)
+                    )
+
+                values.extend(starters[kind])
+
+                needle=term.casefold()
+                seen=set()
+                result=[]
+
+                for value in values:
+                    value=' '.join(str(value).split())
+                    key=value.casefold()
+
+                    if not value or key in seen:
+                        continue
+
+                    if needle and needle not in key:
+                        continue
+
+                    seen.add(key)
+                    result.append(value)
+
+                result.sort(
+                    key=lambda x:(
+                        0 if needle and x.casefold().startswith(needle) else 1,
+                        x.casefold()
+                    )
+                )
+
+                return self._json({
+                    'kind':kind,
+                    'query':term,
+                    'profession':profession,
+                    'items':result[:limit]
+                })
+
+            if path=='/api/search/boolean/validate':
+                if u['role'] not in RECRUITING_ROLES:
+                    return self._json({'error':'Permission denied'},403)
+
+                expression=(qs.get('q') or [''])[0].strip()
+
+                try:
+                    tree=parse_boolean(expression)
+                    return self._json({
+                        'ok':True,
+                        'expression':expression,
+                        'tree':tree
+                    })
+                except BooleanSyntaxError as exc:
+                    return self._json({
+                        'ok':False,
+                        'expression':expression,
+                        'detail':str(exc)
+                    },400)
+
             if path=='/api/reference':
                 if u['role'] in INTERNAL_ROLES:
                     tid=u['tenant_id'];return self._json({'companies':qall(conn,'SELECT id,name FROM companies WHERE tenant_id=? ORDER BY name',(tid,)),'contacts':qall(conn,"SELECT id,company_id,first_name||' '||last_name name FROM contacts WHERE tenant_id=? ORDER BY last_name",(tid,)),'users':qall(conn,'SELECT id,name,role FROM users WHERE active=1 AND tenant_id=? ORDER BY name',(tid,)),'candidates':qall(conn,"SELECT id,first_name||' '||last_name name,current_title FROM candidates WHERE tenant_id=? AND lower(status)!='archived' ORDER BY last_name",(tid,)),'jobs':qall(conn,'SELECT id,job_no,title,company_id,status FROM jobs WHERE tenant_id=? AND archived_at IS NULL ORDER BY created_at DESC',(tid,)),'suppliers':qall(conn,'SELECT id,name FROM suppliers WHERE tenant_id=? ORDER BY name',(tid,))})

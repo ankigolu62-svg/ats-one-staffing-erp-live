@@ -36,3 +36,162 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}.link{c
 .portal-hero{background:linear-gradient(120deg,var(--primary),var(--primary-2))}.funnel div:nth-child(1){background:var(--primary)}.funnel div:nth-child(2){background:var(--coral)}.funnel div:nth-child(3){background:var(--amber)}.funnel div:nth-child(4),.funnel div:nth-child(5){background:var(--accent)}
 @media(max-width:1050px){.launcher{grid-template-columns:1fr 1fr}.dashboard-grid{grid-template-columns:1fr}.search-grid{grid-template-columns:1fr}.search-main{border-right:0}.jobcards{grid-template-columns:1fr 1fr}.two-col,.three-col{grid-template-columns:1fr}}
 @media(max-width:720px){.login-card{grid-template-columns:1fr}.login-hero{display:none}.layout{grid-template-columns:1fr}.sidebar{display:none}.launcher{grid-template-columns:1fr}.jobcards{grid-template-columns:1fr}.top-icons .weather,.top-icons .pin{display:none}.page{padding:10px}.formgrid{grid-template-columns:1fr}.formgrid .span2{grid-column:auto}.search-side{border-top:1px solid #d4dfe5}.filter-row{grid-template-columns:1fr 80px 65px}.filter-row .skillterm{grid-column:1/-1}}
+
+
+/* ============================================================
+   R10D1 — professional interactive search / icon system
+   ============================================================ */
+
+.r10-icon{
+  width:18px;
+  height:18px;
+  display:inline-block;
+  vertical-align:middle;
+  flex:0 0 auto;
+}
+
+.navicon .r10-icon{
+  width:17px;
+  height:17px;
+}
+
+.module-ico .r10-icon{
+  width:31px;
+  height:31px;
+  stroke-width:1.45;
+}
+
+.r10-icon-button{
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+}
+
+.r10-top-icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:#6757D9;
+}
+
+.r10-profession-search{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin:12px 0 10px;
+}
+
+.r10-selected-criteria{
+  min-height:28px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.field,
+.filter-row,
+.r10-profession-search > div{
+  position:relative;
+}
+
+.r10-autocomplete{
+  position:absolute;
+  left:0;
+  right:0;
+  top:calc(100% + 3px);
+  z-index:1000;
+  max-height:260px;
+  overflow:auto;
+  background:#FFFFFF;
+  border:1px solid #E1E3EC;
+  border-radius:8px;
+  box-shadow:0 12px 30px rgba(38,48,68,.13);
+  padding:4px;
+}
+
+.r10-autocomplete-option{
+  display:block;
+  width:100%;
+  border:0;
+  background:transparent;
+  color:#263044;
+  text-align:left;
+  padding:9px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  font:inherit;
+}
+
+.r10-autocomplete-option:hover,
+.r10-autocomplete-option.active{
+  background:#F0EEFB;
+  color:#6757D9;
+}
+
+.r10-boolean-toolbar{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  margin:12px 0;
+}
+
+.r10-example-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:7px;
+  margin:12px 0;
+}
+
+.r10-example{
+  border:1px solid #E1E3EC;
+  background:#FBFAFF;
+  color:#263044;
+  border-radius:7px;
+  padding:9px 11px;
+  text-align:left;
+  cursor:pointer;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+
+.r10-example:hover{
+  border-color:#8B7DE8;
+  background:#F0EEFB;
+}
+
+.r10-map-toggle{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-top:10px;
+}
+
+.r10-validation{
+  margin-top:12px;
+  padding:9px 11px;
+  border-radius:7px;
+  display:none;
+}
+
+.r10-validation.good{
+  display:block;
+  background:#EAF8F4;
+  color:#13775F;
+  border:1px solid #BCE8DC;
+}
+
+.r10-validation.bad{
+  display:block;
+  background:#FFF0EC;
+  color:#A34934;
+  border:1px solid #F4C8BD;
+}
+
+.r10-boolean-results{
+  margin-top:14px;
+}
+
+@media(max-width:900px){
+  .r10-profession-search{
+    grid-template-columns:1fr;
+  }
+}

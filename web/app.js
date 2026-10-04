@@ -4,6 +4,135 @@ const fmtDate=s=>s?new Date(s).toLocaleDateString():'';
 const money=n=>n==null||n===''?'':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n);
 const status=s=>`<span class="status ${esc(String(s||'').toLowerCase().replaceAll(' ','_'))}">${esc(s||'')}</span>`;
 const tag=s=>`<span class="tag">${esc(s)}</span>`;
+
+const R10_ICON_PATHS={
+ home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-6h5v6"/>',
+ menu:'<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
+ dashboard:'<path d="M4 13h6V4H4zM14 20h6V9h-6zM4 20h6v-3H4zM14 5h6V4h-6z"/>',
+ talent:'<circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/><path d="M8 11h6M11 8v6"/>',
+ boolean:'<path d="M5 6h5M5 12h5M5 18h5"/><path d="M15 6h4M15 12h4M15 18h4"/><path d="m12 4 2 2-2 2M12 10l2 2-2 2M12 16l2 2-2 2"/>',
+ candidates:'<circle cx="12" cy="8" r="3"/><path d="M5 20c.8-4 3.2-6 7-6s6.2 2 7 6"/>',
+ hotlists:'<path d="M12 21s7-4.4 7-11a4 4 0 0 0-7-2.5A4 4 0 0 0 5 10c0 6.6 7 11 7 11Z"/>',
+ jobs:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4h6v3M3 12h18M10 12v2h4v-2"/>',
+ companies:'<path d="M4 21V5h10v16M14 10h6v11M7 8h1M10 8h1M7 12h1M10 12h1M7 16h1M10 16h1"/>',
+ contacts:'<circle cx="9" cy="8" r="3"/><path d="M3 20c.5-4 2.5-6 6-6s5.5 2 6 6M16 8h5M18.5 5.5v5"/>',
+ submissions:'<path d="M5 12h12"/><path d="m13 8 4 4-4 4"/><path d="M4 5h8M4 19h8"/>',
+ interviews:'<rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2z"/><circle cx="10" cy="10" r="2"/>',
+ assessments:'<path d="M6 4h12v16H6z"/><path d="m9 10 2 2 4-5M9 16h6"/>',
+ onboarding:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v3h6V3M9 11h6M9 15h6"/>',
+ assignments:'<path d="M4 7h16v13H4z"/><path d="M8 7V4h8v3M8 12h8"/>',
+ timesheets:'<circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/>',
+ expenses:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>',
+ finance:'<circle cx="12" cy="12" r="9"/><path d="M15 8.5c-.8-.7-1.8-1-3-1-1.7 0-3 1-3 2.3 0 3.7 6 1.5 6 5.1 0 1.4-1.3 2.6-3.2 2.6-1.3 0-2.5-.4-3.3-1.2M12 5v14"/>',
+ vms:'<path d="M4 8h13l-3-3M20 16H7l3 3"/><path d="M17 5v6M7 13v6"/>',
+ suppliers:'<path d="M8 12 5 9l-3 3 5 5 4-4"/><path d="m16 12 3-3 3 3-5 5-4-4"/><path d="m9 13 3 3 3-3"/>',
+ communications:'<path d="M4 5h16v12H8l-4 4z"/><path d="m6 8 6 4 6-4"/>',
+ reports:'<path d="M5 20V10h4v10M10 20V4h4v16M15 20v-7h4v7"/>',
+ admin:'<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a7 7 0 0 0-1.7-1L14.5 3h-5l-.4 3.1a7 7 0 0 0-1.7 1L5 6.1 3 9.5 5 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 3.1h5l.4-3.1a7 7 0 0 0 1.7-1l2.4 1 2-3.4L19 13a7 7 0 0 0 0-1Z"/>',
+ audit:'<path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+ search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/>',
+ logout:'<path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10"/>',
+ pin:'<path d="m9 3 6 6-2 2 2 5-2 2-5-5-2 2-1-1 4-4-3-5z"/>',
+ star:'<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+ default:'<circle cx="12" cy="12" r="8"/><path d="M8 12h8M12 8v8"/>'
+};
+
+function r10Icon(name){
+ const key=R10_ICON_PATHS[name]?name:'default';
+ return `<svg class="r10-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${R10_ICON_PATHS[key]}</svg>`;
+}
+
+async function r10SuggestInline(input,kind,profession=''){
+ if(!input)return;
+
+ if(input.dataset.r10Skip==='1'){
+   delete input.dataset.r10Skip;
+   return;
+ }
+
+ const parent=input.parentElement;
+ if(!parent)return;
+
+ parent.querySelectorAll('.r10-autocomplete').forEach(x=>x.remove());
+
+ const q=input.value.trim();
+ const url='/api/search/suggestions?kind='+
+   encodeURIComponent(kind)+
+   '&q='+encodeURIComponent(q)+
+   (profession?'&profession='+encodeURIComponent(profession):'');
+
+ let data;
+ try{
+   data=await api(url);
+ }catch(e){
+   return;
+ }
+
+ const items=data.items||[];
+ if(!items.length)return;
+
+ const list=document.createElement('div');
+ list.className='r10-autocomplete';
+ list.setAttribute('role','listbox');
+
+ let active=-1;
+
+ const choose=(value)=>{
+   input.dataset.r10Skip='1';
+   input.value=value;
+   input.dispatchEvent(new Event('input',{bubbles:true}));
+   list.remove();
+   input.focus();
+ };
+
+ items.forEach((value,index)=>{
+   const option=document.createElement('button');
+   option.type='button';
+   option.className='r10-autocomplete-option';
+   option.textContent=value;
+   option.dataset.index=String(index);
+   option.onclick=()=>choose(value);
+   list.appendChild(option);
+ });
+
+ parent.appendChild(list);
+
+ input.onkeydown=(event)=>{
+   const options=[...list.querySelectorAll('.r10-autocomplete-option')];
+   if(!options.length)return;
+
+   if(event.key==='ArrowDown'){
+     event.preventDefault();
+     active=(active+1)%options.length;
+   }else if(event.key==='ArrowUp'){
+     event.preventDefault();
+     active=(active-1+options.length)%options.length;
+   }else if(event.key==='Enter' && active>=0){
+     event.preventDefault();
+     options[active].click();
+     return;
+   }else if(event.key==='Escape'){
+     list.remove();
+     return;
+   }else{
+     return;
+   }
+
+   options.forEach(
+     (x,i)=>x.classList.toggle('active',i===active)
+   );
+ };
+
+ setTimeout(()=>{
+   document.addEventListener('click',function close(ev){
+     if(ev.target!==input && !list.contains(ev.target)){
+       list.remove();
+       document.removeEventListener('click',close);
+     }
+   });
+ },0);
+}
+
 let ME=null, REF=null, CURRENT='menu', SEARCH_STATE=null, PROFILE_TAB='Resume', selectedSearch=new Set();
 
 async function api(url,opt={}){opt.headers={'Content-Type':'application/json',...(opt.headers||{})}; if(opt.body && typeof opt.body!=='string')opt.body=JSON.stringify(opt.body); const r=await fetch(url,opt); const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.detail||d.error||`HTTP ${r.status}`); return d;}
@@ -15,12 +144,12 @@ function formFields(fields){return fields.map(f=>{let input=''; if(f.type==='sel
 
 const internalRoles=['admin','teamlead','recruiter','sales','hr','finance'];
 const NAV={
- admin:[['menu','⌂','App Menu'],['dashboard','▥','Dashboard'],['talent','◉','Talent Search'],['candidates','👤','Candidates'],['hotlists','🔥','Hotlists / Pools'],['jobs','💼','Jobs'],['companies','🏢','Companies / CRM'],['contacts','☎','Contacts'],['submissions','↗','Submittals'],['interviews','🎥','Interviews'],['assessments','✓','Assessments'],['onboarding','📋','Onboarding'],['assignments','🧰','Assignments'],['timesheets','🕒','Timesheets'],['expenses','💳','Expenses'],['finance','＄','Finance'],['vms','⇄','VMS / MSP'],['suppliers','🤝','Suppliers'],['communications','✉','Communication'],['reports','📊','Reports'],['admin','⚙','Admin'],['audit','🧾','Audit Trail']],
+ admin:[['menu','⌂','App Menu'],['dashboard','▥','Dashboard'],['talent','◉','Talent Search'],['boolean','B','Boolean Search'],['candidates','👤','Candidates'],['hotlists','🔥','Hotlists / Pools'],['jobs','💼','Jobs'],['companies','🏢','Companies / CRM'],['contacts','☎','Contacts'],['submissions','↗','Submittals'],['interviews','🎥','Interviews'],['assessments','✓','Assessments'],['onboarding','📋','Onboarding'],['assignments','🧰','Assignments'],['timesheets','🕒','Timesheets'],['expenses','💳','Expenses'],['finance','＄','Finance'],['vms','⇄','VMS / MSP'],['suppliers','🤝','Suppliers'],['communications','✉','Communication'],['reports','📊','Reports'],['admin','⚙','Admin'],['audit','🧾','Audit Trail']],
  teamlead:null,recruiter:null,sales:null,hr:null,finance:null,
  client:[['clientPortal','🏢','Client Portal']],candidate:[['candidatePortal','🔎','Candidate Portal']],worker:[['workerPortal','🕒','MyTime Portal']],supplier:[['supplierPortal','🤝','Supplier Portal']],approver:[['approverPortal','✓','Approver Portal']]
 };
 NAV.teamlead=NAV.admin.filter(x=>!['admin','finance'].includes(x[0]));
-NAV.recruiter=NAV.admin.filter(x=>['menu','dashboard','talent','candidates','hotlists','jobs','submissions','interviews','assessments','onboarding','communications','reports'].includes(x[0]));
+NAV.recruiter=NAV.admin.filter(x=>['menu','dashboard','talent','boolean','candidates','hotlists','jobs','submissions','interviews','assessments','onboarding','communications','reports'].includes(x[0]));
 NAV.sales=NAV.admin.filter(x=>['menu','dashboard','jobs','companies','contacts','submissions','communications','reports'].includes(x[0]));
 NAV.hr=NAV.admin.filter(x=>['menu','dashboard','candidates','onboarding','assignments','timesheets','expenses','reports'].includes(x[0]));
 NAV.finance=NAV.admin.filter(x=>['menu','dashboard','assignments','timesheets','expenses','finance','reports'].includes(x[0]));
@@ -29,23 +158,23 @@ async function boot(){try{ME=await api('/api/me');REF=await api('/api/reference'
 function defaultRoute(){return internalRoles.includes(ME?.role)?'menu':({client:'clientPortal',candidate:'candidatePortal',worker:'workerPortal',supplier:'supplierPortal',approver:'approverPortal'}[ME?.role]||'menu')}
 function renderLogin(){ME=null; document.body.innerHTML=`<div id="app"></div><div id="modalRoot"></div><div id="toastRoot"></div>`; $('#app').innerHTML=`<div class="login-shell"><div class="login-card"><div class="login-hero"><div class="brandmark"><b>ATS</b> One</div><h1>Staffing ERP</h1><p>Multi-user recruiting, CRM, sourcing, onboarding, workforce and financial operations in one linked system.</p><div class="login-features"><div class="login-feature"><b>Talent Intelligence</b><br>Boolean + experience-aware search</div><div class="login-feature"><b>Staffing Workflow</b><br>Job → Submission → Start → Assignment</div><div class="login-feature"><b>Back Office</b><br>Time, expense, PO & invoices</div><div class="login-feature"><b>Role Portals</b><br>Client, candidate, worker & supplier</div></div></div><div class="login-form"><h2>Sign in</h2><p class="subtle">Use any demo account below. All accounts use the same shared server database.</p><form id="loginForm"><div class="field"><label>Email</label><input name="email" value="admin@atsone.local" autocomplete="username"></div><div class="field"><label>Password</label><input name="password" type="password" value="Admin@123" autocomplete="current-password"></div><button class="btn primary wide">SIGN IN</button></form><div class="demo-grid">${[['Admin','admin@atsone.local','Admin@123'],['Recruiter','recruiter@atsone.local','Recruit@123'],['Team Lead','teamlead@atsone.local','Lead@123'],['Sales','sales@atsone.local','Sales@123'],['HR','hr@atsone.local','HR@123'],['Finance','finance@atsone.local','Finance@123'],['Client','client@atsone.local','Client@123'],['Candidate','candidate@atsone.local','Candidate@123'],['Worker','worker@atsone.local','Worker@123'],['Supplier','supplier@atsone.local','Supplier@123'],['Approver','approver@atsone.local','Approve@123']].map(x=>`<div class="demo-pill" onclick="quickLogin('${x[1]}','${x[2]}')"><b>${x[0]}</b><br>${x[1]}</div>`).join('')}</div></div></div></div>`; $('#loginForm').onsubmit=async e=>{e.preventDefault();const d=fd(e.target);try{await api('/api/login',{method:'POST',body:d});await boot()}catch(er){toast(er.message,'err')}}}
 async function quickLogin(email,password){try{await api('/api/login',{method:'POST',body:{email,password}});await boot()}catch(e){toast(e.message,'err')}}
-function renderShell(){document.body.innerHTML=`<div id="app"></div><div id="modalRoot"></div><div id="toastRoot"></div>`; const nav=NAV[ME.role]||[]; $('#app').innerHTML=`<div class="app-shell"><div class="topbar"><div class="logo"><b>ATS</b> One</div><div class="global-search"><input id="globalQ" placeholder="Search candidates, jobs, companies…"><button onclick="globalSearch()">🔍</button></div><div class="top-icons"><span class="pin">📌</span><span>⭐</span><span class="weather">☀ 72°F</span><span>⚙</span></div><div class="user-chip"><div class="avatar">${esc(ME.name[0])}</div><div><b>${esc(ME.name)}</b><div class="muted" style="font-size:10px">${esc(ME.role)}</div></div><button class="btn small" onclick="logout()">⏻</button></div></div><div class="layout"><aside class="sidebar"><div class="side-title">Navigation</div>${nav.map(x=>`<div class="navitem" data-route="${x[0]}" onclick="go('${x[0]}')"><span class="navicon">${x[1]}</span>${x[2]}</div>`).join('')}<div class="side-title">Session</div><div class="navitem" onclick="go('menu')"><span class="navicon">⌂</span>Home</div></aside><main class="content" id="content"></main></div></div>`; $('#globalQ').addEventListener('keydown',e=>{if(e.key==='Enter')globalSearch()})}
+function renderShell(){document.body.innerHTML=`<div id="app"></div><div id="modalRoot"></div><div id="toastRoot"></div>`; const nav=NAV[ME.role]||[]; $('#app').innerHTML=`<div class="app-shell"><div class="topbar"><div class="logo"><b>ATS</b> One</div><div class="global-search"><input id="globalQ" placeholder="Search candidates, jobs, companies…"><button class="r10-icon-button" aria-label="Search" onclick="globalSearch()">${r10Icon("search")}</button></div><div class="top-icons"><span class="r10-top-icon">${r10Icon("pin")}</span><span class="r10-top-icon">${r10Icon("star")}</span><span class="weather">72°F</span><span class="r10-top-icon">${r10Icon("admin")}</span></div><div class="user-chip"><div class="avatar">${esc(ME.name[0])}</div><div><b>${esc(ME.name)}</b><div class="muted" style="font-size:10px">${esc(ME.role)}</div></div><button class="btn small r10-icon-button" aria-label="Sign out" onclick="logout()">${r10Icon("logout")}</button></div></div><div class="layout"><aside class="sidebar"><div class="side-title">Navigation</div>${nav.map(x=>`<div class="navitem" data-route="${x[0]}" onclick="go('${x[0]}')"><span class="navicon">${r10Icon(x[0])}</span>${x[2]}</div>`).join('')}<div class="side-title">Session</div><div class="navitem" onclick="go('menu')"><span class="navicon">${r10Icon("home")}</span>Home</div></aside><main class="content" id="content"></main></div></div>`; $('#globalQ').addEventListener('keydown',e=>{if(e.key==='Enter')globalSearch()})}
 async function logout(){await api('/api/logout',{method:'POST'}).catch(()=>{});renderLogin()}
 function go(r){location.hash=r;route(r)}
 async function route(r){CURRENT=r; $$('.navitem').forEach(n=>n.classList.toggle('active',n.dataset.route===r)); const c=$('#content'); if(!c)return; c.innerHTML='<div class="page"><div class="panel"><div class="panel-body">Loading…</div></div></div>'; try{
- const [base,id]=r.split('/'); const fn={menu:pageMenu,dashboard:pageDashboard,talent:pageTalent,candidates:pageCandidates,candidate:()=>pageCandidate(id),hotlists:pageHotlists,jobs:pageJobs,job:()=>pageJob(id),companies:pageCompanies,contacts:pageContacts,submissions:pageSubmissions,interviews:pageInterviews,assessments:pageAssessments,onboarding:pageOnboarding,assignments:pageAssignments,timesheets:pageTimesheets,expenses:pageExpenses,finance:pageFinance,vms:pageVMS,suppliers:pageSuppliers,communications:pageCommunications,reports:pageReports,admin:pageAdmin,audit:pageAudit,candidatePortal:pageCandidatePortal,clientPortal:pageClientPortal,workerPortal:pageWorkerPortal,supplierPortal:pageSupplierPortal,approverPortal:pageApproverPortal}[base]; if(!fn)throw new Error('Unknown page'); await fn(); enhanceR8Controls(base,id); }catch(e){c.innerHTML=`<div class="page"><div class="panel"><div class="panel-body"><b>Unable to load page.</b><br>${esc(e.message)}</div></div></div>`}}
+ const [base,id]=r.split('/'); const fn={menu:pageMenu,dashboard:pageDashboard,talent:pageTalent,boolean:pageBoolean,candidates:pageCandidates,candidate:()=>pageCandidate(id),hotlists:pageHotlists,jobs:pageJobs,job:()=>pageJob(id),companies:pageCompanies,contacts:pageContacts,submissions:pageSubmissions,interviews:pageInterviews,assessments:pageAssessments,onboarding:pageOnboarding,assignments:pageAssignments,timesheets:pageTimesheets,expenses:pageExpenses,finance:pageFinance,vms:pageVMS,suppliers:pageSuppliers,communications:pageCommunications,reports:pageReports,admin:pageAdmin,audit:pageAudit,candidatePortal:pageCandidatePortal,clientPortal:pageClientPortal,workerPortal:pageWorkerPortal,supplierPortal:pageSupplierPortal,approverPortal:pageApproverPortal}[base]; if(!fn)throw new Error('Unknown page'); await fn(); enhanceR8Controls(base,id); }catch(e){c.innerHTML=`<div class="page"><div class="panel"><div class="panel-body"><b>Unable to load page.</b><br>${esc(e.message)}</div></div></div>`}}
 window.addEventListener('hashchange',()=>route(location.hash.slice(1)||defaultRoute()));
 function head(title,crumb='',actions=''){return `<div class="pagehead"><div><h1>${title}</h1><div class="crumb">${crumb}</div></div><div class="actions">${actions}</div></div>`}
 function panel(title,body,extra=''){return `<div class="panel"><div class="panel-title"><span>${title}</span>${extra}</div><div class="panel-body">${body}</div></div>`}
 
 function pageMenu(){const modules=[
- ['teal','Talent Management',[['◉','Talent Search','talent'],['💡','New Candidate','newCandidate'],['👤','Search Candidates','candidates'],['🧑‍💼','Search Employees','assignments'],['🔥','Candidate Hotlists','hotlists'],['📝','Candidate Notes','candidates'],['🏷','Search Attributes','talent'],['⬆','Import Candidates','newCandidate']]],
+ ['teal','Talent Management',[['◉','Talent Search','talent'],['B','Boolean Search','boolean'],['💡','New Candidate','newCandidate'],['👤','Search Candidates','candidates'],['🧑‍💼','Search Employees','assignments'],['🔥','Candidate Hotlists','hotlists'],['📝','Candidate Notes','candidates'],['🏷','Search Attributes','talent'],['⬆','Import Candidates','newCandidate']]],
  ['orange','Job Management',[['💼','My Jobs','jobs'],['🧳','My Jobs as Primary','jobs'],['🔍','Search Jobs','jobs'],['➕','New Job','newJob'],['📊','Jobs Dashboard','dashboard'],['📌','My Jobs Dashboard','dashboard'],['↗','Submittals','submissions'],['🎥','Interviews','interviews']]],
  ['purple','CRM',[['👤','My Contacts','contacts'],['🔎','Search Contacts','contacts'],['➕','New Contact','newContact'],['🔥','Contact Hotlists','contacts'],['🏢','Search Companies','companies'],['➕','New Company','newCompany'],['📈','Opportunities','companies'],['🧲','Leads','companies']]],
  ['blue','Reporting Tools',[['📄','Reports','reports'],['📊','BI Shared With Me','reports'],['🧾','Audit Trail','audit'],['⚙','Configuration','admin']]],
  ['blue','Dashboards',[['📊','User Dashboard','dashboard'],['👥','Team Dashboard','dashboard'],['📈','Opportunities','companies'],['💵','Financial','finance']]],
  ['yellow','Events & Communication',[['📅','Calendar','interviews'],['🎤','e-Interview','assessments'],['✉','Email / SMS','communications'],['✅','Onboarding','onboarding'],['🕒','Timesheets','timesheets'],['❓','Help / Map','reports']]],
- ]; $('#content').innerHTML=`<div class="launcher-bg"><div class="launcher">${modules.map(m=>`<div class="module-card ${m[0]}"><h3>${m[1]}</h3><div class="module-links">${m[2].map(a=>`<div class="module-link" onclick="menuAction('${a[2]}')"><span class="module-ico">${a[0]}</span><span class="module-name">${a[1]}</span></div>`).join('')}</div></div>`).join('')}</div></div>`}
+ ]; $('#content').innerHTML=`<div class="launcher-bg"><div class="launcher">${modules.map(m=>`<div class="module-card ${m[0]}"><h3>${m[1]}</h3><div class="module-links">${m[2].map(a=>`<div class="module-link" onclick="menuAction('${a[2]}')"><span class="module-ico">${r10Icon(a[2])}</span><span class="module-name">${a[1]}</span></div>`).join('')}</div></div>`).join('')}</div></div>`}
 function menuAction(a){if(a==='newCandidate')return openCandidateForm();if(a==='newJob')return openJobForm();if(a==='newContact')return openContactInfo();if(a==='newCompany')return openCompanyInfo();go(a)}
 
 async function pageDashboard(){const d=await api('/api/dashboard'); if(!internalRoles.includes(ME.role)) return go(defaultRoute()); const max=Math.max(...d.company_pipeline.map(x=>x.count),1); $('#content').innerHTML=`<div class="page">${head('User Dashboard','Home › Dashboards › User Dashboard')}<div class="dashboard-grid"><div class="dashcol"><div class="metric-panel"><h3>My Sales Funnel</h3><div class="funnel">${d.company_pipeline.map(x=>`<div>${x.stage} · ${x.count}</div>`).join('')}</div></div><div class="metric-panel"><h3>My Recruiting Activities So Far This Week</h3><div class="panel-body"><div class="kv"><b>Open Tasks</b><span>${d.open_tasks}</span></div><div class="kv"><b>Active Candidates</b><span>${d.candidates}</span></div><div class="kv"><b>Submittals</b><span>${d.pipeline.reduce((a,x)=>a+x.count,0)}</span></div></div></div></div><div class="dashcol"><div class="metric-panel"><h3>My Open Jobs</h3><div class="metric-row"><div class="metric"><strong>${d.open_jobs}</strong><span>Open Jobs</span></div><div class="metric"><strong>${d.primary_jobs}</strong><span>As Primary</span></div><div class="metric"><strong>${d.jobs_no_activity}</strong><span>W/O Activity</span></div><div class="metric"><strong>${Math.max(0,d.open_jobs-d.primary_jobs)}</strong><span>As Secondary</span></div></div></div><div class="metric-panel"><h3>My Sales Pipeline of Companies</h3><div class="bar-chart">${d.company_pipeline.map(x=>`<div class="bar" style="height:${Math.max(8,(x.count/max)*135)}px"><em>${x.count}</em><label>${x.stage}</label></div>`).join('')}</div></div><div class="metric-panel"><h3>Recent Jobs</h3><div class="tablewrap"><table class="grid"><tr><th>Job #</th><th>Title</th><th>Client</th><th>Status</th><th>Subs</th></tr>${d.recent_jobs.map(j=>`<tr><td><a class="link" onclick="go('job/${j.id}')">${j.job_no}</a></td><td>${esc(j.title)}</td><td>${esc(j.company_name||'')}</td><td>${status(j.status)}</td><td>${j.submissions}</td></tr>`).join('')}</table></div></div></div><div class="dashcol"><div class="metric-panel"><h3>My Current Employees</h3><div class="metric-row" style="grid-template-columns:1fr 1fr"><div class="metric"><strong>${d.active_assignments}</strong><span>Active</span></div><div class="metric bad"><strong>${d.pending_timesheets}</strong><span>Timesheets Pending</span></div></div></div><div class="metric-panel"><h3>My Starts Onboarding</h3><div class="metric-row" style="grid-template-columns:1fr 1fr"><div class="metric"><strong>${d.starts_30}</strong><span>Starts</span></div><div class="metric warn"><strong>${d.pending_onboarding}</strong><span>Incomplete Packages</span></div></div></div><div class="metric-panel"><h3>To Do This Week</h3><div class="panel-body">${d.tasks.length?d.tasks.map(t=>`<div class="kv"><span>${esc(t.title)}</span><small>${fmtDate(t.due_at)}</small></div>`).join(''):'<div class="empty">No tasks</div>'}</div></div><div class="metric-panel"><h3>Finance Attention</h3><div class="metric-row" style="grid-template-columns:1fr 1fr"><div class="metric warn"><strong>${d.pending_expenses}</strong><span>Expenses Pending</span></div><div class="metric"><strong>${d.active_assignments}</strong><span>Billable Assignments</span></div></div></div></div></div></div>`}
@@ -54,21 +183,21 @@ const professions=['RN','Data Engineer','Software Engineer','Business Analyst','
 function blankSearch(){return {tab:'Profession/Specialty',profession:'',specialty:'',licenses:[],certifications:[],qualification:'',require:[{term:'',years:0,recent:false,operator:'AND'}],exclude:[{term:''}],exclude_candidate_ids:[],attributes:[],title:'',state:'',zip:'',radius:'50',pay_min:'',pay_max:'',available_before:'',without_mapping:false,raw_boolean:''}}
 async function pageTalent(){SEARCH_STATE=SEARCH_STATE||blankSearch(); renderTalent()}
 function renderTalent(results=null,criteria='',duration=''){const s=SEARCH_STATE; const tabs=['Profession/Specialty','Licenses','Certifications','Qualification','Require','Exclude','Attribute','Title']; let main='';
- if(s.tab==='Profession/Specialty')main=`<div class="sectionhead">PROFESSION / SPECIALTY</div><p class="subtle">Selecting any of the following will narrow down your search results.</p><div class="profession-grid">${professions.map(p=>`<div class="profession-item"><button onclick="pickProfession('${esc(p)}')">${s.profession===p?'REMOVE':'ADD'}</button><span>${esc(p)}</span>${s.profession===p?`<input style="margin-left:auto;width:48%" placeholder="Specialty" value="${esc(s.specialty)}" oninput="SEARCH_STATE.specialty=this.value;refreshCriteria()">`:''}</div>`).join('')}</div>`;
+ if(s.tab==='Profession/Specialty')main=`<div class="sectionhead">PROFESSION / SPECIALTY</div><p class="subtle">Type to search professions and specialties. Suggestions combine current ATS data with a safe starter vocabulary.</p><div class="r10-profession-search"><div class="field"><label>Profession</label><input id="r10ProfessionInput" data-testid="profession-input" autocomplete="off" placeholder="Start typing: Software Engineer, Data Engineer..." value="${esc(s.profession)}" oninput="SEARCH_STATE.profession=this.value;refreshCriteria();r10SuggestInline(this,'profession')"></div><div class="field"><label>Specialty</label><input id="r10SpecialtyInput" data-testid="specialty-input" autocomplete="off" placeholder="Backend, Java Backend, Data Platform..." value="${esc(s.specialty)}" oninput="SEARCH_STATE.specialty=this.value;refreshCriteria();r10SuggestInline(this,'specialty',SEARCH_STATE.profession)"></div></div><div class="r10-selected-criteria">${s.profession?`<span class="tag">Profession: ${esc(s.profession)}</span>`:''}${s.specialty?`<span class="tag">Specialty: ${esc(s.specialty)}</span>`:''}</div>`;
  if(s.tab==='Licenses')main=`<div class="sectionhead">LICENSES</div>${licenseRows()}<button class="btn small" onclick="addLicense()">+ AND License</button>`;
  if(s.tab==='Certifications')main=`<div class="sectionhead">CERTIFICATIONS</div>${certRows()}<button class="btn small" onclick="addCert()">+ AND Certification</button>`;
- if(s.tab==='Qualification')main=`<div class="sectionhead">QUALIFICATION</div><div class="field"><label>Degree / qualification / value</label><input value="${esc(s.qualification)}" oninput="SEARCH_STATE.qualification=this.value;refreshCriteria()" placeholder="BSN, MBA, Bachelors…"></div><p class="subtle">Qualification searches structured qualification records, not only raw resume text.</p>`;
+ if(s.tab==='Qualification')main=`<div class="sectionhead">QUALIFICATION</div><div class="field"><label>Degree / qualification / value</label><input value="${esc(s.qualification)}" oninput="SEARCH_STATE.qualification=this.value;refreshCriteria();r10SuggestInline(this,'qualification')" placeholder="BSN, MBA, Bachelors…"></div><p class="subtle">Qualification searches structured qualification records, not only raw resume text.</p>`;
  if(s.tab==='Require')main=`<div class="sectionhead">REQUIRE — MUST-HAVE SKILLS / EXPERIENCE</div>${requireRows()}<button class="btn small" onclick="addRequire()">+ Add condition</button><div class="field"><label>Raw Boolean / JobDiva-style expression</label><textarea rows="3" oninput="SEARCH_STATE.raw_boolean=this.value;refreshCriteria()" placeholder='(DEVELOPER RECENT OVER 5 YRS) AND (JAVA OVER 5 YRS OR "C #" OVER 5 YRS)'>${esc(s.raw_boolean)}</textarea></div>`;
  if(s.tab==='Exclude')main=`<div class="sectionhead">EXCLUDE</div>${excludeRows()}<button class="btn small" onclick="addExclude()">+ Add excluded term</button>`;
  if(s.tab==='Attribute')main=`<div class="sectionhead">ATTRIBUTE</div><div class="field"><label>Internal candidate attributes (comma separated)</label><input value="${esc(s.attributes.join(', '))}" oninput="SEARCH_STATE.attributes=this.value.split(',').map(x=>x.trim()).filter(Boolean);refreshCriteria()" placeholder="Top Candidate, Compact License"></div>`;
- if(s.tab==='Title')main=`<div class="sectionhead">TITLE</div><div class="field"><label>Current / most recent title contains</label><input value="${esc(s.title)}" oninput="SEARCH_STATE.title=this.value;refreshCriteria()" placeholder="Senior Java Developer"></div>`;
+ if(s.tab==='Title')main=`<div class="sectionhead">TITLE</div><div class="field"><label>Current / most recent title contains</label><input value="${esc(s.title)}" oninput="SEARCH_STATE.title=this.value;refreshCriteria();r10SuggestInline(this,'title')" placeholder="Senior Java Developer"></div>`;
  const res=results?`<div style="margin-top:14px"><div class="search-criteria-line">Search Criteria: <b>${esc(criteria)}</b> <span class="muted" style="float:right">Showing ${results.length} · ${duration||0} ms</span></div><div class="actionbar"><span class="actionlink" onclick="searchAction('exclude')">✖ Exclude</span><span class="actionlink" onclick="searchAction('qualify')">✔ Qualify</span><span class="actionlink" onclick="searchAction('expand')">👀 Expand</span><span class="actionlink" onclick="searchAction('hotlist')">🔥 Hotlist</span><span class="actionlink" onclick="searchAction('preview')">🔎 Preview</span><span class="actionlink" onclick="searchAction('relevancy')">🎉 Relevancy</span><span class="actionlink" onclick="searchAction('bulk')">Bulk Action ▾</span><span class="actionlink" onclick="searchAction('email')">✉ Email Merge</span></div><div class="tablewrap"><table class="grid"><tr><th><input type="checkbox" onchange="toggleAllSearch(this.checked)"></th><th>Name</th><th>Phone</th><th>City</th><th>State</th><th>Received</th><th>Available</th><th>Last Note</th><th>Relevancy</th></tr>${results.map(c=>`<tr data-cid="${c.id}"><td><input class="srchk" type="checkbox" value="${c.id}" onchange="toggleSearchSel(${c.id},this.checked)"></td><td><a class="link" onclick="go('candidate/${c.id}')">${esc(c.first_name+' '+c.last_name)}</a><br><small>${esc(c.current_title||'')}</small></td><td>${esc(c.phone||'')}</td><td>${esc(c.city||'')}</td><td>${esc(c.state||'')}</td><td>${fmtDate(c.created_at)}</td><td>${fmtDate(c.availability_date)}</td><td>${c.notes?.[0]?fmtDate(c.notes[0].created_at):''}</td><td class="score">${c.relevance}%</td></tr>`).join('')}</table></div></div>`:'';
  $('#content').innerHTML=`<div class="page">${head('Talent Search','App Menu › Sourcing › Talent Search','<button class="btn" onclick="saveDynamicPool()">Save as Dynamic Pool</button>')}<div class="search-shell"><div class="search-titlebar">Talent Search</div><div class="search-tabs">${tabs.map(t=>`<div class="search-tab ${s.tab===t?'active':''}" onclick="SEARCH_STATE.tab='${t}';renderTalent()">${t}</div>`).join('')}</div><div class="search-grid"><div class="search-main">${main}<div class="criteria-box" id="criteriaPreview">${esc(compileLocalCriteria())}</div></div><div class="search-side"><div class="sectionhead">REFINE SEARCH</div><div class="side-row"><label>State:</label><input value="${esc(s.state)}" oninput="SEARCH_STATE.state=this.value"></div><div class="side-row"><label>Zip Code:</label><input value="${esc(s.zip)}" oninput="SEARCH_STATE.zip=this.value"></div><div class="side-row"><label>Within:</label><select onchange="SEARCH_STATE.radius=this.value"><option>25</option><option ${s.radius==='50'?'selected':''}>50</option><option>100</option><option>250</option></select></div><div class="sectionhead" style="margin-top:12px">SALARY / PAY</div><div class="side-row"><label>Min:</label><input type="number" value="${esc(s.pay_min)}" oninput="SEARCH_STATE.pay_min=this.value"></div><div class="side-row"><label>Max:</label><input type="number" value="${esc(s.pay_max)}" oninput="SEARCH_STATE.pay_max=this.value"></div><div class="sectionhead" style="margin-top:12px">AVAILABILITY</div><div class="side-row"><label>Available by:</label><input type="date" value="${esc(s.available_before)}" oninput="SEARCH_STATE.available_before=this.value"></div><label style="display:block;margin-top:10px"><input type="checkbox" ${s.without_mapping?'checked':''} onchange="SEARCH_STATE.without_mapping=this.checked"> w/o Mapping</label><p class="subtle" style="font-size:11px">Turn mapping off to match only literal skill terms instead of normalized aliases.</p></div></div><div class="search-footer"><button class="btn primary" onclick="runTalentSearch()">SEARCH</button> <button class="btn" onclick="SEARCH_STATE=blankSearch();renderTalent()">CLEAR</button></div></div>${res}</div>`}
 function pickProfession(p){if(SEARCH_STATE.profession===p){SEARCH_STATE.profession='';SEARCH_STATE.specialty=''}else SEARCH_STATE.profession=p;renderTalent()}
-function licenseRows(){if(!SEARCH_STATE.licenses.length)SEARCH_STATE.licenses.push({type:'',country:'USA',state:'',active:true,expiry_after:'',documented:false});return SEARCH_STATE.licenses.map((r,i)=>`<div class="filter-row"><input class="skillterm" placeholder="License type" value="${esc(r.type)}" oninput="SEARCH_STATE.licenses[${i}].type=this.value;refreshCriteria()"><select onchange="SEARCH_STATE.licenses[${i}].country=this.value"><option>USA</option><option ${r.country==='India'?'selected':''}>India</option><option ${r.country==='UK'?'selected':''}>UK</option></select><input placeholder="State" value="${esc(r.state)}" oninput="SEARCH_STATE.licenses[${i}].state=this.value;refreshCriteria()"><input type="date" title="Expiring After" value="${esc(r.expiry_after)}" oninput="SEARCH_STATE.licenses[${i}].expiry_after=this.value"><button class="btn small" onclick="SEARCH_STATE.licenses.splice(${i},1);renderTalent()">✕</button></div><div style="margin:0 0 9px 130px"><label><input type="checkbox" ${r.active?'checked':''} onchange="SEARCH_STATE.licenses[${i}].active=this.checked"> Active</label> &nbsp; <label><input type="checkbox" ${r.documented?'checked':''} onchange="SEARCH_STATE.licenses[${i}].documented=this.checked"> Require Documentation</label></div>`).join('')}
-function certRows(){if(!SEARCH_STATE.certifications.length)SEARCH_STATE.certifications.push({name:'',active:true,expiry_after:'',documented:false});return SEARCH_STATE.certifications.map((r,i)=>`<div class="filter-row"><input class="skillterm" placeholder="Certification e.g. ACLS" value="${esc(r.name)}" oninput="SEARCH_STATE.certifications[${i}].name=this.value;refreshCriteria()"><span><label><input type="checkbox" ${r.active?'checked':''} onchange="SEARCH_STATE.certifications[${i}].active=this.checked"> Active</label></span><input type="date" value="${esc(r.expiry_after)}" oninput="SEARCH_STATE.certifications[${i}].expiry_after=this.value"><span><label><input type="checkbox" ${r.documented?'checked':''} onchange="SEARCH_STATE.certifications[${i}].documented=this.checked"> Doc</label></span><button class="btn small" onclick="SEARCH_STATE.certifications.splice(${i},1);renderTalent()">✕</button></div>`).join('')}
-function requireRows(){return SEARCH_STATE.require.map((r,i)=>`<div class="filter-row"><input class="skillterm" placeholder="Required term / skill" value="${esc(r.term)}" oninput="SEARCH_STATE.require[${i}].term=this.value;refreshCriteria()"><input type="number" min="0" step=".5" value="${esc(r.years)}" title="Minimum years" oninput="SEARCH_STATE.require[${i}].years=this.value;refreshCriteria()"><label><input type="checkbox" ${r.recent?'checked':''} onchange="SEARCH_STATE.require[${i}].recent=this.checked;refreshCriteria()"> Recent</label><select onchange="SEARCH_STATE.require[${i}].operator=this.value;refreshCriteria()"><option>AND</option><option ${r.operator==='OR'?'selected':''}>OR</option></select><button class="btn small" onclick="SEARCH_STATE.require.splice(${i},1);renderTalent()">✕</button></div>`).join('')}
-function excludeRows(){return SEARCH_STATE.exclude.map((r,i)=>`<div class="filter-row" style="grid-template-columns:1fr 40px"><input class="skillterm" placeholder="Excluded term" value="${esc(r.term)}" oninput="SEARCH_STATE.exclude[${i}].term=this.value;refreshCriteria()"><button class="btn small" onclick="SEARCH_STATE.exclude.splice(${i},1);renderTalent()">✕</button></div>`).join('')}
+function licenseRows(){if(!SEARCH_STATE.licenses.length)SEARCH_STATE.licenses.push({type:'',country:'USA',state:'',active:true,expiry_after:'',documented:false});return SEARCH_STATE.licenses.map((r,i)=>`<div class="filter-row"><input class="skillterm" placeholder="License type" value="${esc(r.type)}" oninput="SEARCH_STATE.licenses[${i}].type=this.value;refreshCriteria();r10SuggestInline(this,'license')"><select onchange="SEARCH_STATE.licenses[${i}].country=this.value"><option>USA</option><option ${r.country==='India'?'selected':''}>India</option><option ${r.country==='UK'?'selected':''}>UK</option></select><input placeholder="State" value="${esc(r.state)}" oninput="SEARCH_STATE.licenses[${i}].state=this.value;refreshCriteria()"><input type="date" title="Expiring After" value="${esc(r.expiry_after)}" oninput="SEARCH_STATE.licenses[${i}].expiry_after=this.value"><button class="btn small" onclick="SEARCH_STATE.licenses.splice(${i},1);renderTalent()">✕</button></div><div style="margin:0 0 9px 130px"><label><input type="checkbox" ${r.active?'checked':''} onchange="SEARCH_STATE.licenses[${i}].active=this.checked"> Active</label> &nbsp; <label><input type="checkbox" ${r.documented?'checked':''} onchange="SEARCH_STATE.licenses[${i}].documented=this.checked"> Require Documentation</label></div>`).join('')}
+function certRows(){if(!SEARCH_STATE.certifications.length)SEARCH_STATE.certifications.push({name:'',active:true,expiry_after:'',documented:false});return SEARCH_STATE.certifications.map((r,i)=>`<div class="filter-row"><input class="skillterm" placeholder="Certification e.g. ACLS" value="${esc(r.name)}" oninput="SEARCH_STATE.certifications[${i}].name=this.value;refreshCriteria();r10SuggestInline(this,'certification')"><span><label><input type="checkbox" ${r.active?'checked':''} onchange="SEARCH_STATE.certifications[${i}].active=this.checked"> Active</label></span><input type="date" value="${esc(r.expiry_after)}" oninput="SEARCH_STATE.certifications[${i}].expiry_after=this.value"><span><label><input type="checkbox" ${r.documented?'checked':''} onchange="SEARCH_STATE.certifications[${i}].documented=this.checked"> Doc</label></span><button class="btn small" onclick="SEARCH_STATE.certifications.splice(${i},1);renderTalent()">✕</button></div>`).join('')}
+function requireRows(){return SEARCH_STATE.require.map((r,i)=>`<div class="filter-row"><input class="skillterm" placeholder="Required term / skill" value="${esc(r.term)}" oninput="SEARCH_STATE.require[${i}].term=this.value;refreshCriteria();r10SuggestInline(this,'skill')"><input type="number" min="0" step=".5" value="${esc(r.years)}" title="Minimum years" oninput="SEARCH_STATE.require[${i}].years=this.value;refreshCriteria()"><label><input type="checkbox" ${r.recent?'checked':''} onchange="SEARCH_STATE.require[${i}].recent=this.checked;refreshCriteria()"> Recent</label><select onchange="SEARCH_STATE.require[${i}].operator=this.value;refreshCriteria()"><option>AND</option><option ${r.operator==='OR'?'selected':''}>OR</option></select><button class="btn small" onclick="SEARCH_STATE.require.splice(${i},1);renderTalent()">✕</button></div>`).join('')}
+function excludeRows(){return SEARCH_STATE.exclude.map((r,i)=>`<div class="filter-row" style="grid-template-columns:1fr 40px"><input class="skillterm" placeholder="Excluded term" value="${esc(r.term)}" oninput="SEARCH_STATE.exclude[${i}].term=this.value;refreshCriteria();r10SuggestInline(this,'skill')"><button class="btn small" onclick="SEARCH_STATE.exclude.splice(${i},1);renderTalent()">✕</button></div>`).join('')}
 function addLicense(){SEARCH_STATE.licenses.push({type:'',country:'USA',state:'',active:true,expiry_after:'',documented:false});renderTalent()} function addCert(){SEARCH_STATE.certifications.push({name:'',active:true,expiry_after:'',documented:false});renderTalent()} function addRequire(){SEARCH_STATE.require.push({term:'',years:0,recent:false,operator:'AND'});renderTalent()} function addExclude(){SEARCH_STATE.exclude.push({term:''});renderTalent()}
 function compileLocalCriteria(){const s=SEARCH_STATE,b=[]; if(s.profession)b.push(`PROFESSION [ ${s.profession} IS ${s.specialty||'ANY'} ]`);s.licenses.filter(x=>x.type).forEach(x=>b.push(`LICENCES=("${x.type}" ST IN {${x.state||'ANY'}})`));s.certifications.filter(x=>x.name).forEach(x=>b.push(`CERTIFICATION [ ${x.name} ]`));s.require.filter(x=>x.term).forEach((x,i)=>b.push(`${i?x.operator+' ':''}(${x.term}${x.recent?' RECENT':''}${+x.years>0?' OVER '+x.years+' YRS':''})`));s.exclude.filter(x=>x.term).forEach(x=>b.push(`NOT (${x.term})`));if(s.title)b.push(`TITLE [ ${s.title} ]`);if(s.raw_boolean)b.push(`BOOLEAN [ ${s.raw_boolean} ]`);return b.join(' ')||'ALL ACTIVE CANDIDATES'}
 function refreshCriteria(){const e=$('#criteriaPreview');if(e)e.textContent=compileLocalCriteria()}
@@ -81,6 +210,244 @@ async function qualifySelected(){const jid=+$('#qualJob').value;for(const cid of
 async function searchAction(a){const ids=[...selectedSearch];if(!ids.length)return toast('Select one or more candidates first','err');const selected=(window.LAST_TALENT_RESULTS||[]).filter(x=>ids.includes(x.id));if(a==='exclude'){SEARCH_STATE.exclude_candidate_ids=[...new Set([...(SEARCH_STATE.exclude_candidate_ids||[]),...ids])];return runTalentSearch()}if(a==='preview')return go('candidate/'+ids[0]);if(a==='expand')return modal('Structured Match Evidence',selected.map(c=>`<h3>${esc(c.first_name+' '+c.last_name)} â€” ${c.relevance}%</h3><div class="codeblock">${esc(JSON.stringify(c.match_reasons||[],null,2))}</div>`).join(''),'<button class="btn" onclick="closeModal()">Close</button>',true);if(a==='relevancy')return modal('Relevancy Scores',selected.map(c=>`<div class="kv"><b>${esc(c.first_name+' '+c.last_name)}</b><span>${c.relevance}% Â· ${esc((c.match_reasons||[]).map(x=>typeof x==='string'?x:(x.term||x.type)).join(', '))}</span></div>`).join(''),'<button class="btn" onclick="closeModal()">Close</button>');if(a==='hotlist'){const hs=await api('/api/hotlists');return modal('Add to Hotlist',`<div class="field"><label>Hotlist</label><select id="hotSel">${hs.map(h=>`<option value="${h.id}">${esc(h.name)}</option>`).join('')}</select></div>`,`<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="addSelectedHotlist()">Add ${ids.length}</button>`)}if(a==='qualify')return modal('Qualify against Job',`<div class="field"><label>Job</label><select id="qualJob">${REF.jobs.filter(j=>j.status==='Open').map(j=>`<option value="${j.id}">${j.job_no} â€” ${esc(j.title)}</option>`).join('')}</select></div>`,`<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="qualifySelected()">Qualify</button>`);if(a==='email'){await api('/api/search/bulk',{method:'POST',body:{action:'email',candidate_ids:ids,subject:'Talent outreach',body:'Personalized recruiter outreach logged from Talent Search.'}});return toast(`Email merge logged for ${ids.length} candidate(s)`)}if(a==='bulk')return modal('Bulk Action Engine',`<p>${ids.length} candidates selected.</p><div class="field"><label>Action</label><select id="bulkKind"><option value="email">Email outreach</option><option value="qualify">Qualify for job</option><option value="hotlist">Add to hotlist</option></select></div>`,`<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="runBulkAction()">Continue</button>`)}
 async function runBulkAction(){const action=$('#bulkKind').value;closeModal();return searchAction(action)}
 async function saveDynamicPool(){const name=prompt('Dynamic Talent Pool / Hotlist name:','Saved Talent Search');if(!name)return;await api('/api/hotlists',{method:'POST',body:{name,description:'Dynamic pool saved from Talent Search',visibility:'Team',mode:'dynamic',saved_search:intentionalSearch()}});toast('Dynamic pool saved')}
+
+
+function r10BooleanResultHTML(results,criteria,duration){
+ const rows=results||[];
+
+ return `<div class="r10-boolean-results">
+   <div class="search-criteria-line">
+     Search Criteria: <b>${esc(criteria||'')}</b>
+     <span class="muted" style="float:right">
+       Showing ${rows.length} · ${duration||0} ms
+     </span>
+   </div>
+
+   ${rows.length?`
+   <div class="actionbar">
+     <span class="actionlink" onclick="searchAction('exclude')">Exclude</span>
+     <span class="actionlink" onclick="searchAction('qualify')">Qualify</span>
+     <span class="actionlink" onclick="searchAction('expand')">Expand</span>
+     <span class="actionlink" onclick="searchAction('hotlist')">Hotlist</span>
+     <span class="actionlink" onclick="searchAction('preview')">Preview</span>
+     <span class="actionlink" onclick="searchAction('relevancy')">Relevancy</span>
+     <span class="actionlink" onclick="searchAction('bulk')">Bulk Action</span>
+     <span class="actionlink" onclick="searchAction('email')">Email Merge</span>
+   </div>
+
+   <div class="tablewrap">
+   <table class="grid">
+    <tr>
+      <th><input type="checkbox" onchange="toggleAllSearch(this.checked)"></th>
+      <th>Name</th>
+      <th>Title</th>
+      <th>Location</th>
+      <th>Relevancy</th>
+      <th>Evidence</th>
+    </tr>
+    ${rows.map(c=>`
+      <tr data-cid="${c.id}">
+       <td><input class="srchk" type="checkbox" value="${c.id}" onchange="toggleSearchSel(${c.id},this.checked)"></td>
+       <td><a class="link" onclick="go('candidate/${c.id}')">${esc(c.first_name+' '+c.last_name)}</a></td>
+       <td>${esc(c.current_title||'')}</td>
+       <td>${esc([c.city,c.state].filter(Boolean).join(', '))}</td>
+       <td class="score">${c.relevance}%</td>
+       <td>${esc((c.match_reasons||[]).map(x=>typeof x==='string'?x:(x.term||x.type||'match')).join(', '))}</td>
+      </tr>
+    `).join('')}
+   </table>
+   </div>`:
+   '<div class="empty">No candidates matched this Boolean expression.</div>'}
+ </div>`;
+}
+
+async function pageBoolean(){
+ SEARCH_STATE=SEARCH_STATE||blankSearch();
+
+ $('#content').innerHTML=`<div class="page">
+ ${head(
+   'Boolean Search',
+   'App Menu › Sourcing › Boolean Search'
+ )}
+ <div class="panel">
+  <div class="panel-title">
+   <span>Experience-aware Boolean Search</span>
+  </div>
+  <div class="panel-body">
+   <p class="subtle">
+    Use AND, OR, NOT, parentheses, RECENT and OVER N YRS.
+    This page uses the same server-side matching engine as Talent Search.
+   </p>
+
+   <div class="r10-boolean-toolbar">
+    <button class="btn small" onclick="r10BooleanInsert(' AND ')">AND</button>
+    <button class="btn small" onclick="r10BooleanInsert(' OR ')">OR</button>
+    <button class="btn small" onclick="r10BooleanInsert(' NOT ')">NOT</button>
+    <button class="btn small" onclick="r10BooleanInsert('(')">(</button>
+    <button class="btn small" onclick="r10BooleanInsert(')')">)</button>
+    <button class="btn small" onclick="r10BooleanInsert(' RECENT ')">RECENT</button>
+    <button class="btn small" onclick="r10BooleanInsert(' OVER 5 YRS')">OVER 5 YRS</button>
+   </div>
+
+   <div class="field">
+    <label>Boolean expression</label>
+    <textarea
+      id="r10BooleanExpression"
+      data-testid="boolean-expression"
+      rows="5"
+      placeholder='(Java OVER 5 YRS AND Banking OVER 2 YRS) AND NOT Mainframe'
+      oninput="SEARCH_STATE.raw_boolean=this.value"
+    >${esc(SEARCH_STATE.raw_boolean||'')}</textarea>
+   </div>
+
+   <div class="r10-example-grid">
+    <button class="r10-example" onclick="r10BooleanExample(this.textContent)">
+     (Java OVER 5 YRS AND Banking OVER 2 YRS) AND NOT Mainframe
+    </button>
+    <button class="r10-example" onclick="r10BooleanExample(this.textContent)">
+     (DEVELOPER RECENT OVER 5 YRS) AND (JAVA OVER 5 YRS OR "C #" OVER 5 YRS)
+    </button>
+    <button class="r10-example" onclick="r10BooleanExample(this.textContent)">
+     Amazon Web Services OVER 5 YRS
+    </button>
+   </div>
+
+   <label class="r10-map-toggle">
+    <input
+      id="r10BooleanMapping"
+      type="checkbox"
+      ${SEARCH_STATE.without_mapping?'':'checked'}
+      onchange="SEARCH_STATE.without_mapping=!this.checked"
+    >
+    Synonym / normalized skill mapping
+   </label>
+
+   <div class="actions" style="margin-top:14px">
+    <button
+      class="btn"
+      data-testid="boolean-validate"
+      onclick="r10ValidateBoolean()"
+    >Validate</button>
+
+    <button
+      class="btn primary"
+      data-testid="boolean-search"
+      onclick="r10RunBooleanSearch()"
+    >Search Candidates</button>
+
+    <button
+      class="btn"
+      onclick="SEARCH_STATE.raw_boolean='';pageBoolean()"
+    >Clear</button>
+   </div>
+
+   <div
+     id="r10BooleanValidation"
+     data-testid="boolean-validation"
+     class="r10-validation"
+   ></div>
+  </div>
+ </div>
+
+ <div id="r10BooleanResults"></div>
+ </div>`;
+}
+
+function r10BooleanInsert(value){
+ const el=$('#r10BooleanExpression');
+ if(!el)return;
+
+ const start=el.selectionStart??el.value.length;
+ const end=el.selectionEnd??el.value.length;
+
+ el.value=
+   el.value.slice(0,start)+
+   value+
+   el.value.slice(end);
+
+ SEARCH_STATE.raw_boolean=el.value;
+
+ el.focus();
+
+ const pos=start+value.length;
+ el.setSelectionRange(pos,pos);
+}
+
+function r10BooleanExample(value){
+ const el=$('#r10BooleanExpression');
+ if(!el)return;
+
+ el.value=value.trim();
+ SEARCH_STATE.raw_boolean=el.value;
+ el.focus();
+}
+
+async function r10ValidateBoolean(){
+ const expression=$('#r10BooleanExpression')?.value.trim()||'';
+ const out=$('#r10BooleanValidation');
+
+ if(!expression){
+   out.className='r10-validation bad';
+   out.textContent='Enter a Boolean expression.';
+   return false;
+ }
+
+ try{
+   await api(
+     '/api/search/boolean/validate?q='+
+     encodeURIComponent(expression)
+   );
+
+   out.className='r10-validation good';
+   out.textContent='Valid Boolean expression';
+   return true;
+
+ }catch(e){
+   out.className='r10-validation bad';
+   out.textContent='Invalid Boolean expression: '+e.message;
+   return false;
+ }
+}
+
+async function r10RunBooleanSearch(){
+ const valid=await r10ValidateBoolean();
+
+ if(!valid)return;
+
+ const expression=$('#r10BooleanExpression').value.trim();
+
+ SEARCH_STATE=SEARCH_STATE||blankSearch();
+ SEARCH_STATE.raw_boolean=expression;
+ SEARCH_STATE.without_mapping=
+   !($('#r10BooleanMapping')?.checked);
+
+ selectedSearch.clear();
+
+ const payload=intentionalSearch();
+
+ try{
+   const data=await api(
+     '/api/search/talent',
+     {
+       method:'POST',
+       body:payload
+     }
+   );
+
+   $('#r10BooleanResults').innerHTML=
+     r10BooleanResultHTML(
+       data.results||[],
+       data.criteria||expression,
+       data.duration_ms||0
+     );
+
+ }catch(e){
+   const out=$('#r10BooleanValidation');
+   out.className='r10-validation bad';
+   out.textContent=e.message;
+ }
+}
+
 
 async function pageCandidates(){const rows=await api('/api/candidates'); $('#content').innerHTML=`<div class="page">${head('Candidates','Talent Management › Search Candidates','<button class="btn primary" onclick="openCandidateForm()">+ New Candidate</button>')} ${panel('Candidate Database',`<div class="tablewrap"><table class="grid"><tr><th>Name</th><th>Title</th><th>Profession</th><th>Location</th><th>Availability</th><th>Pay</th><th>Source</th><th>Status</th></tr>${rows.map(c=>`<tr><td><a class="link" onclick="go('candidate/${c.id}')">${esc(c.first_name+' '+c.last_name)}</a><br><small>${esc(c.email||'')}</small></td><td>${esc(c.current_title||'')}</td><td>${esc(c.profession||'')}<br><small>${esc(c.specialty||'')}</small></td><td>${esc([c.city,c.state,c.country].filter(Boolean).join(', '))}</td><td>${fmtDate(c.availability_date)}</td><td>${money(c.pay_min)}–${money(c.pay_max)}/${esc(c.desired_rate_type)}</td><td>${esc(c.source||'')}</td><td>${status(c.status)}</td></tr>`).join('')}</table></div>`)}</div>`}
 function openCandidateForm(){modal('New Candidate',`<form id="candForm"><div class="formgrid">${formFields([{name:'first_name',label:'First Name',required:true},{name:'last_name',label:'Last Name',required:true},{name:'email',label:'Email'},{name:'phone',label:'Phone'},{name:'current_title',label:'Current Title'},{name:'profession',label:'Profession'},{name:'specialty',label:'Specialty'},{name:'city',label:'City'},{name:'state',label:'State'},{name:'country',label:'Country',value:'USA'},{name:'zip',label:'Postal Code'},{name:'availability_date',label:'Available Date',type:'date'},{name:'source',label:'Source',value:'Manual'},{name:'resume_text',label:'Resume / Profile Text',type:'textarea',span:true}])}</div><button type="button" class="btn small" onclick="previewResumeParse()">Parse resume for recruiter review</button><div id="parseReview"></div></form>`,`<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="submitCandidate()">Create Candidate</button>`,true)}

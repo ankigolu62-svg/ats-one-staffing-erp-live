@@ -149,7 +149,7 @@ def local_suite(base,db_path,result):
 
 def readonly_suite(base,result):
     api=API(base);login=api.login();health=api.req('/api/health');me=api.req('/api/me');candidates=api.req('/api/candidates');jobs=api.req('/api/jobs');search=api.req('/api/search/talent','POST',{'raw_boolean':'Java OR Python','available_before':'','radius_miles':''});matches=api.req('/api/candidates/1/matches')
-    result.check('LIVE_HEALTH_VERSION',login[0]==200 and health[0]==200 and body(health).get('version')=='3.0.0-full' and body(health).get('persistence') in ('local-sqlite','supabase-storage'))
+    result.check('LIVE_HEALTH_VERSION',login[0]==200 and health[0]==200 and body(health).get('version')=='3.1.0-direct-ui' and body(health).get('persistence') in ('local-sqlite','supabase-storage'))
     result.check('LIVE_SESSION_READS',me[0]==200 and candidates[0]==200 and jobs[0]==200)
     result.check('LIVE_BOOLEAN_READONLY',search[0]==200 and isinstance(body(search).get('results'),list))
     result.check('LIVE_MATCH_READONLY',matches[0]==200)
