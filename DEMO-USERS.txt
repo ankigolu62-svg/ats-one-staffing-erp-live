@@ -1,0 +1,47 @@
+ATS ONE STAFFING ERP — DEMO / TEST ACCOUNTS
+============================================
+All users authenticate against the same shared SQLite server database.
+
+Administrator
+  admin@atsone.local
+  Admin@123
+
+Team Lead
+  teamlead@atsone.local
+  Lead@123
+
+Recruiter
+  recruiter@atsone.local
+  Recruit@123
+
+Sales / Account Manager
+  sales@atsone.local
+  Sales@123
+
+HR / Onboarding
+  hr@atsone.local
+  HR@123
+
+Finance / Payroll
+  finance@atsone.local
+  Finance@123
+
+Client / Hiring Manager
+  client@atsone.local
+  Client@123
+
+Candidate
+  candidate@atsone.local
+  Candidate@123
+
+Worker / Consultant
+  worker@atsone.local
+  Worker@123
+
+Supplier
+  supplier@atsone.local
+  Supplier@123
+
+Timesheet / Expense Approver
+  approver@atsone.local
+  Approve@123

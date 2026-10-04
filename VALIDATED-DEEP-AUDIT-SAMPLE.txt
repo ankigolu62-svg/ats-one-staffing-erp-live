@@ -1,0 +1,347 @@
+================================================================================================
+ ATS ONE STAFFING ERP — DEEP FUNCTION ACCEPTANCE AUDIT
+================================================================================================
+TIMESTAMP=2026-09-29T18:22:10.856973+00:00
+PYTHON=3.13.5
+APP_ROOT=/mnt/data/ats_audit_src/ATS-One-Staffing-ERP
+OVERALL=FAIL
+TOTAL_CHECKS=244
+PASS=191
+FAIL=15
+PARTIAL=31
+EXTERNAL=7
+================================================================================================
+
+[PACKAGE / UI]
+PASS     | Package file server.py | /mnt/data/ats_audit_src/ATS-One-Staffing-ERP/server.py
+PASS     | Package file web/index.html | /mnt/data/ats_audit_src/ATS-One-Staffing-ERP/web/index.html
+PASS     | Package file web/app.js | /mnt/data/ats_audit_src/ATS-One-Staffing-ERP/web/app.js
+PASS     | Package file web/styles.css | /mnt/data/ats_audit_src/ATS-One-Staffing-ERP/web/styles.css
+PASS     | Package file FUNCTION-MAP.md | /mnt/data/ats_audit_src/ATS-One-Staffing-ERP/FUNCTION-MAP.md
+PASS     | Package file ARCHITECTURE.md | /mnt/data/ats_audit_src/ATS-One-Staffing-ERP/ARCHITECTURE.md
+PASS     | Package file DEMO-USERS.txt | /mnt/data/ats_audit_src/ATS-One-Staffing-ERP/DEMO-USERS.txt
+PASS     | UI route visible: Talent Search | present
+PASS     | UI route visible: Candidates | present
+PASS     | UI route visible: Hotlists / Pools | present
+PASS     | UI route visible: Jobs | present
+PASS     | UI route visible: Companies / CRM | present
+PASS     | UI route visible: Contacts | present
+PASS     | UI route visible: Submittals | present
+PASS     | UI route visible: Interviews | present
+PASS     | UI route visible: Assessments | present
+PASS     | UI route visible: Onboarding | present
+PASS     | UI route visible: Assignments | present
+PASS     | UI route visible: Timesheets | present
+PASS     | UI route visible: Expenses | present
+PASS     | UI route visible: Finance | present
+PASS     | UI route visible: VMS / MSP | present
+PASS     | UI route visible: Suppliers | present
+PASS     | UI route visible: Communication | present
+PASS     | UI route visible: Reports | present
+PASS     | UI route visible: Admin | present
+PASS     | UI route visible: Audit Trail | present
+PASS     | UI route visible: Candidate Portal | present
+PASS     | UI route visible: Client Portal | present
+PASS     | UI route visible: MyTime Portal | present
+PASS     | UI route visible: Supplier Portal | present
+PASS     | UI route visible: Approver Portal | present
+PASS     | Talent Search has all 8 tabs | Profession/Specialty, Licenses, Certifications, Qualification, Require, Exclude, Attribute, Title
+PASS     | Talent result action bar exposes 8 actions | Exclude, Qualify, Expand, Hotlist, Preview, Relevancy, Bulk Action, Email Merge
+
+[RUNTIME]
+PASS     | Server boot | http://127.0.0.1:48235
+PASS     | Health API | version=2.0.0
+PASS     | Static asset / | status=200
+PASS     | Static asset /app.js | status=200
+PASS     | Static asset /styles.css | status=200
+
+[AUTH / RBAC]
+PASS     | Anonymous protected API rejected | status=401
+PASS     | Invalid password rejected | status=401
+PASS     | Login admin | user=System Administrator
+PASS     | /me session admin | id=1
+PASS     | Login teamlead | user=Tanya Team Lead
+PASS     | /me session teamlead | id=2
+PASS     | Login recruiter | user=Ravi Recruiter
+PASS     | /me session recruiter | id=3
+PASS     | Login sales | user=Maya Account Manager
+PASS     | /me session sales | id=4
+PASS     | Login hr | user=Neha HR Ops
+PASS     | /me session hr | id=5
+PASS     | Login finance | user=Amit Finance
+PASS     | /me session finance | id=6
+PASS     | Login client | user=Olivia Hiring Manager
+PASS     | /me session client | id=7
+PASS     | Login candidate | user=Priya Nair
+PASS     | /me session candidate | id=8
+PASS     | Login worker | user=Arjun Mehta
+PASS     | /me session worker | id=9
+PASS     | Login supplier | user=Nina Supplier
+PASS     | /me session supplier | id=10
+PASS     | Login approver | user=Carlos Approver
+PASS     | /me session approver | id=11
+PASS     | Session cookie HttpOnly | ats_session=mn-pq29LKX-WdaKbuDdx-QxYPJ4ZIcBzYZGRu6YfQsU; Path=/; HttpOnly; SameSite=Lax; Max-Age=64800
+PASS     | Session cookie SameSite=Lax | ats_session=mn-pq29LKX-WdaKbuDdx-QxYPJ4ZIcBzYZGRu6YfQsU; Path=/; HttpOnly; SameSite=Lax; Max-Age=64800
+
+[ROLE PORTALS]
+PASS     | Dashboard admin | keys=17
+PASS     | Dashboard teamlead | keys=17
+PASS     | Dashboard recruiter | keys=17
+PASS     | Dashboard sales | keys=17
+PASS     | Dashboard hr | keys=17
+PASS     | Dashboard finance | keys=17
+PASS     | Dashboard client | keys=6
+PASS     | Dashboard candidate | keys=4
+PASS     | Dashboard worker | keys=4
+PASS     | Dashboard supplier | keys=3
+PASS     | Dashboard approver | keys=17
+
+[API SURFACE]
+PASS     | GET /api/candidates | type=list
+PASS     | GET /api/hotlists | type=list
+PASS     | GET /api/jobs | type=list
+PASS     | GET /api/companies | type=list
+PASS     | GET /api/contacts | type=list
+PASS     | GET /api/leads | type=list
+PASS     | GET /api/opportunities | type=list
+PASS     | GET /api/shifts | type=list
+PASS     | GET /api/job-distribution | type=list
+PASS     | GET /api/integrations | type=list
+PASS     | GET /api/submissions | type=list
+PASS     | GET /api/interviews | type=list
+PASS     | GET /api/assessments | type=list
+PASS     | GET /api/onboarding | type=list
+PASS     | GET /api/assignments | type=list
+PASS     | GET /api/timesheets | type=list
+PASS     | GET /api/expenses | type=list
+PASS     | GET /api/invoices | type=list
+PASS     | GET /api/purchase-orders | type=list
+PASS     | GET /api/vms | type=dict
+PASS     | GET /api/suppliers | type=list
+PASS     | GET /api/communications | type=list
+PASS     | GET /api/tasks | type=list
+PASS     | GET /api/automations | type=list
+PASS     | GET /api/users | type=list
+PASS     | GET /api/custom-fields | type=list
+PASS     | GET /api/audit | type=list
+PASS     | GET /api/reports/summary | type=dict
+PASS     | GET /api/reference | type=dict
+
+[DATA ISOLATION]
+PASS     | Client demo account is bound to a company | company_id=1
+
+[CANDIDATE MASTER]
+PASS     | Recruiter creates candidate + structured skills | candidate_id=9
+
+[MULTI-USER]
+PASS     | Recruiter-created candidate visible to Admin | candidate_id=9
+
+[CANDIDATE MASTER]
+PASS     | Candidate patch | candidate_id=9
+PASS     | Candidate note creation | note_id=1
+PASS     | Candidate profile bundles skills/notes/submissions | skills=3, notes=1
+
+[TALENT SEARCH]
+PASS     | Profession/Specialty | count=2 criteria=PROFESSION [ Software Engineer IS Backend ]
+PASS     | Require years + recent + exclude | count=1 criteria=(Java RECENT OVER 5 YRS)  AND (Banking OVER 2 YRS) NOT (Mainframe)
+PASS     | Raw Boolean parser | count=1 criteria=BOOLEAN [ (Java OVER 5 YRS AND Banking OVER 2 YRS) AND NOT Mainframe ]
+PASS     | Title | count=1 criteria=TITLE [ Senior Java Developer ]
+PASS     | License state/active/documented | count=1 criteria=LICENCES=("Registered Nurse RN" ST IN {CA})
+PASS     | Certification | count=1 criteria=CERTIFICATION [ ACLS ]
+PASS     | Qualification | count=2 criteria=ALL ACTIVE CANDIDATES
+PASS     | Attribute | count=1 criteria=ALL ACTIVE CANDIDATES
+PASS     | State refinement | count=1 criteria=ALL ACTIVE CANDIDATES
+PASS     | Pay minimum refinement | count=1 criteria=ALL ACTIVE CANDIDATES
+PASS     | Availability refinement | count=1 criteria=ALL ACTIVE CANDIDATES
+FAIL     | Skill synonym mapping toggle | mapped={'criteria': '(Amazon Web Services OVER 5 YRS)', 'duration_ms': 0, 'count': 0, 'results': []} literal={'criteria': '(Amazon Web Services OVER 5 YRS)', 'duration_ms': 0, 'count': 0, 'results': []}
+
+[AUTH / RBAC]
+PASS     | Candidate denied internal Talent Search | status=403
+
+[HOTLISTS / POOLS]
+PASS     | Create static hotlist | hotlist_id=3
+PASS     | Add hotlist member | candidate_id=9
+PASS     | Static pool retrieval/member mapping | members=1
+PASS     | Dynamic pool re-runs saved search | dynamic_results=2
+
+[TALENT SEARCH]
+PASS     | Email Merge action logs communication | communication_id=2
+
+[CRM]
+PASS     | Create company | company_id=5
+PASS     | Create contact linked to company | contact_id=6
+PASS     | Create lead | lead_id=2
+PASS     | Create opportunity | opportunity_id=4
+
+[JOBS]
+PASS     | Create job linked to CRM | job_id=6
+
+[CRM]
+PASS     | Company submission guideline exposed for job inheritance | MAX 3 SUBMITTALS; RTR REQUIRED
+
+[JOBS]
+PASS     | Job patch + guideline override | job_id=6
+PASS     | Job override persists separately from company rule | company=MAX 3 SUBMITTALS; RTR REQUIRED override=MAX 2; CLIENT FORM REQUIRED
+
+[HIRING WORKFLOW]
+PASS     | Create client-visible requisition | job_id=7
+PASS     | Recruiter qualifies candidate into Interested layer | job=7 candidate=2
+
+[CANDIDATE PORTAL]
+PASS     | Candidate self-apply/interest | job=7 candidate=1
+
+[HIRING WORKFLOW]
+PASS     | Create submission separate from interest | submission_id=2
+
+[CLIENT PORTAL]
+PASS     | Client sees submission for own company | visible_submissions=1
+PASS     | Client advances submission to interview | submission=2
+
+[INTERVIEWS]
+PASS     | Create interview and link to submission | interview_id=2
+PASS     | Interview creation moves submission status | status=interview
+
+[ASSESSMENTS]
+PASS     | Assessment invite creation | assessment_id=3
+
+[ONBOARDING]
+PASS     | Create onboarding package with requirements | package_id=2
+PASS     | Package requirement mapping | requirements=[5, 6]
+PASS     | Package auto-completes when all requirements complete | status=complete
+
+[WORKFORCE]
+PASS     | Create assignment with bill/pay/cost-center/VMS/approver mapping | assignment_id=2
+PASS     | Worker sees own assignment | worker_assignments=2
+
+[TIME / EXPENSE]
+PASS     | Worker submits 45h timesheet | total=45.0
+PASS     | Automatic 40 regular / 5 overtime split | regular=40 overtime=5.0
+
+[APPROVER PORTAL]
+PASS     | Approver sees client-company timesheet | visible=1
+PASS     | Approver approves timesheet | timesheet=2
+
+[TIME / EXPENSE]
+PASS     | Worker submits expense | expense_id=2
+
+[APPROVER PORTAL]
+PASS     | Approver approves expense | expense=2
+
+[FINANCE]
+PASS     | Finance creates issued invoice | invoice=INV-260903
+
+[REPORTING]
+PASS     | Summary report aggregates recruiting/workforce/finance | sections=['recruiting', 'workforce', 'finance', 'submission_by_status', 'jobs_by_company']
+
+[SUPPLIER PORTAL]
+PASS     | Supplier job list is release-filtered | released=1 all=7
+PASS     | Supplier submits candidate to released job | submission_id=3
+
+[MULTI-USER]
+PASS     | 24 concurrent login+dashboard probes | passed=24/24
+
+[AUDIT]
+PASS     | Mutation/search/login actions recorded | actions=['ADD_HOTLIST_MEMBER', 'ADD_NOTE', 'CREATE', 'LOGIN', 'MARK_INTERESTED', 'SEARCH', 'SEED', 'STATUS', 'UPDATE', 'UPSERT']
+
+[AUTH / RBAC]
+PASS     | Candidate cannot create candidate master | status=403
+PASS     | Finance cannot create candidate master | status=403
+PASS     | Recruiter cannot create company | status=403
+PASS     | Client cannot create internal job through generic endpoint | status=403
+PASS     | Non-admin cannot create user | status=403
+
+[DATA ISOLATION]
+PASS     | Candidate cannot open another candidate profile | status=403
+PASS     | Candidate can open own profile | status=200
+
+[SECURITY / DATA ISOLATION]
+FAIL     | Candidate cannot PATCH another candidate | UNAUTHORIZED ACCESS ALLOWED status=200
+FAIL     | Candidate cannot PATCH internal job | UNAUTHORIZED ACCESS ALLOWED status=200
+FAIL     | Candidate cannot create internal hotlist | UNAUTHORIZED ACCESS ALLOWED status=201
+FAIL     | Candidate cannot create submission for another candidate | UNAUTHORIZED ACCESS ALLOWED status=201
+FAIL     | Candidate cannot force submission to hired | UNAUTHORIZED ACCESS ALLOWED status=200
+FAIL     | Candidate cannot create interview | UNAUTHORIZED ACCESS ALLOWED status=201
+FAIL     | Candidate cannot create assignment | UNAUTHORIZED ACCESS ALLOWED status=201
+FAIL     | Candidate cannot approve expense | UNAUTHORIZED ACCESS ALLOWED status=200
+FAIL     | Candidate cannot list finance invoices | UNAUTHORIZED ACCESS ALLOWED status=200
+FAIL     | Candidate cannot list internal CRM companies | UNAUTHORIZED ACCESS ALLOWED status=200
+FAIL     | Supplier cannot browse internal candidate database | UNAUTHORIZED ACCESS ALLOWED status=200
+FAIL     | Client cannot open another company job by direct ID | UNAUTHORIZED ACCESS ALLOWED status=200
+FAIL     | Client reference API must not expose internal users/candidate pool | UNAUTHORIZED ACCESS ALLOWED status=200
+FAIL     | Supplier cannot submit to unreleased job | UNAUTHORIZED submission allowed status=201
+
+[DATA ISOLATION]
+PASS     | Client job list scoped to own company | count=3
+PASS     | Worker timesheets scoped to own candidate | count=2
+PASS     | Worker expenses scoped to own candidate | count=2
+PASS     | Approver timesheets scoped to own company | count=1
+
+[AUTH / RBAC]
+PASS     | Logout invalidates session | after_logout=401
+
+[SOURCE CAPABILITY COVERAGE]
+PASS     | Candidate list/detail/create/basic patch/notes | route(s) present
+PASS     | Deep Talent Search endpoint | route(s) present
+PASS     | Static & dynamic hotlist create/add/view | route(s) present
+PASS     | Company/contact/lead/opportunity create+list | route(s) present
+PASS     | Job create/list/detail/basic patch | route(s) present
+PASS     | Interested candidate layer | route(s) present
+PASS     | Submission create + status workflow | route(s) present
+PASS     | Interview create + list | route(s) present
+PASS     | Onboarding package + requirement completion | route(s) present
+PASS     | Assignment create + list | route(s) present
+PASS     | Timesheet create/upsert + status | route(s) present
+PASS     | Expense create + status | route(s) present
+PASS     | Invoice create + list | route(s) present
+PASS     | Communication log create + list | route(s) present
+PASS     | User create + list | route(s) present
+PASS     | Summary reports | route(s) present
+PASS     | Audit trail | route(s) present
+PARTIAL  | Resume parsing into structured experience/skills | No resume-parser/write API; resume text is stored, structured skills are supplied separately.
+PARTIAL  | Candidate employment history editing | Table exists; no create/update/delete API.
+PARTIAL  | Candidate licenses editing | Search/read data exists; no CRUD API.
+PARTIAL  | Candidate certifications editing | Search/read data exists; no CRUD API.
+PARTIAL  | Candidate qualifications/sub-values editing | Search/read data exists; no CRUD API.
+PARTIAL  | Candidate attributes editing | Search/read data exists; no CRUD API.
+PARTIAL  | Candidate document upload/version/verification | Metadata table exists; no upload/download or CRUD API.
+PARTIAL  | Hotlist remove/update/delete | Create/add/view exist; remove/update/delete routes absent.
+PARTIAL  | Bulk Action engine | UI explicitly falls back to Hotlist/Qualify/Email Merge; generic bulk action engine absent.
+PARTIAL  | Job distribution publish/sync | Read-only route/UI; no publish/update/sync write API.
+PARTIAL  | Job user-role assignment / clone / delete | Table/read exists; no job-user mutation, clone or delete API.
+PARTIAL  | Lead lifecycle update/convert | Lead create/list exists; no lead update/convert endpoint.
+PARTIAL  | Opportunity stage update / close-won/lost | Create/list exists; no update endpoint.
+PARTIAL  | Interview feedback/rating/status update | Create/list exists; no interview update endpoint.
+PARTIAL  | Assessment answer/scoring/completion | Invite/list exists; no answer submission or completion/update endpoint.
+PARTIAL  | Start lifecycle / cancellation / termination | Start table exists; no API route to create/update starts.
+PARTIAL  | Assignment lifecycle update/termination | Create/list exists; no assignment status/update endpoint.
+PARTIAL  | Shift scheduling CRUD | Read-only route; no create/update/delete API.
+PARTIAL  | Attendance CRUD | Schema exists; no API route.
+PARTIAL  | Purchase order CRUD | Read-only route; no create/update API.
+PARTIAL  | Invoice payment/status lifecycle | Create/list exists; no issue/pay/void/update endpoint.
+PARTIAL  | VMS account/mapping CRUD + sync engine | Read-only objects; no write/sync endpoint.
+PARTIAL  | Supplier registry/release administration | Read/list exists; no create/update/release management endpoint.
+PARTIAL  | Task create/assign/complete | Read-only endpoint.
+PARTIAL  | Automation rule create/edit/execute | Read-only registry; no rule engine execution endpoint.
+PARTIAL  | Integration credential/config/sync actions | Read-only registry; vendor calls not implemented.
+PARTIAL  | UDF definition/value CRUD | Definitions read-only; entity custom values have no API.
+PARTIAL  | User disable/edit/reset-password/role update | Create/list only.
+PARTIAL  | Report builder / 1000+ report catalog | One summary endpoint; no report-builder/catalog parity.
+PARTIAL  | Delete/archive API coverage | No HTTP DELETE handler in server.
+PARTIAL  | True multi-tenant tenant isolation | Shared multi-user database exists, but no tenant_id / tenant boundary model.
+
+[EXTERNAL INTEGRATIONS]
+EXTERNAL | LinkedIn / paid job boards | Requires real vendor account/credentials/contract; internal mapping only can be tested locally.
+EXTERNAL | Fieldglass / Beeline live VMS | Requires real vendor account/credentials/contract; internal mapping only can be tested locally.
+EXTERNAL | Production Email/SMS/VOIP | Requires real vendor account/credentials/contract; internal mapping only can be tested locally.
+EXTERNAL | Background screening / identity verification | Requires real vendor account/credentials/contract; internal mapping only can be tested locally.
+EXTERNAL | Payroll/GL live connector | Requires real vendor account/credentials/contract; internal mapping only can be tested locally.
+EXTERNAL | E-Verify/government verification | Requires real vendor account/credentials/contract; internal mapping only can be tested locally.
+EXTERNAL | Legally-certified e-signature | Requires real vendor account/credentials/contract; internal mapping only can be tested locally.
+
+================================================================================================
+VERDICT LEGEND
+PASS     = exercised and passed in isolated runtime or source route is materially implemented.
+FAIL     = runtime bug, broken workflow, or security/data-isolation defect detected.
+PARTIAL  = some functionality exists but the full claimed workflow/CRUD/lifecycle is not implemented.
+EXTERNAL = cannot be truthfully validated without real third-party credentials/contracts.
+================================================================================================

@@ -1,0 +1,34 @@
+ATS ONE STAFFING ERP — ACCEPTANCE RESULT
+=========================================
+
+Executed against the local threaded server and shared SQLite database.
+
+LOGIN_ALL_ROLES=PASS (11 roles)
+CONCURRENT_MULTIUSER_READ=PASS
+STRUCTURED_TALENT_SEARCH=PASS
+RAW_BOOLEAN_SEARCH=PASS
+SHARED_CREATE_VISIBILITY=PASS
+HOTLIST_POOL=PASS
+CRM_CHAIN_CREATE=PASS
+JOB_TO_SUBMISSION_TO_INTERVIEW_TO_ONBOARDING=PASS
+CANDIDATE_SELF_APPLY_SECURITY=PASS
+WORKER_APPROVER_FINANCE_CHAIN=PASS
+RBAC_NEGATIVE_TESTS=PASS
+ROLE_DATA_FILTERING=PASS
+AUDIT_TRAIL=PASS
+SERVER_PY_COMPILE=PASS
+APP_JS_SYNTAX=PASS
+
+Key validated structured search:
+  Profession=Software Engineer
+  Specialty=Backend
+  Java >= 5 years + Recent
+  Banking >= 2 years
+  Exclude Mainframe
+  Result: Arjun Mehta only
+
+Key validated raw Boolean search:
+  (Java OVER 5 YRS AND Banking OVER 2 YRS) AND NOT Mainframe
+  Result count: 1
+
+Note: Browser automation screenshots could not be executed in the build container because its Chromium policy blocks loopback URLs. Static JavaScript syntax and live HTTP/API behavior were validated separately.

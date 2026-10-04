@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.log
+.env
+.env.*
+data/*.db
+data/*.db-*
+audit-results/
+.DS_Store
