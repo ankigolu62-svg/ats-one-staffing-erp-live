@@ -589,6 +589,175 @@ function newAutomation(){modal('New Internal Automation',`<form id="autoForm"><d
 async function submitAutomation(){const d=fd($('#autoForm'));await api('/api/automations',{method:'POST',body:{name:d.name,trigger_name:d.trigger_name,condition:{},action:{type:'create_task',title:d.task_title}}});closeModal();toast('Automation created');pageAdmin()}
 function newConnector(){modal('New Connector Configuration',`<form id="connForm"><div class="formgrid">${formFields([{name:'category',label:'Category',value:'Internal'},{name:'name',label:'Name',required:true},{name:'mode',label:'Mode',type:'select',options:['Internal','Demo','External']},{name:'credential_ref',label:'Credential Reference (not secret)'},{name:'notes',label:'Notes',type:'textarea',span:true}])}</div></form>`,`<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="submitConnector()">Create</button>`)}
 async function submitConnector(){await api('/api/integrations',{method:'POST',body:fd($('#connForm'))});closeModal();toast('Connector configured');pageAdmin()}
+
+/* ============================================================
+   R12A_CONTROL_PERSISTENCE
+
+   Operational controls injected by enhanceR8Controls() must
+   survive direct pageX() rerenders triggered after CRUD actions
+   and candidate profile tab switches.
+
+   This wrapper is deliberately idempotent:
+   - exactly one enhanced control set per rendered pagehead
+   - route() may call enhancer again without duplication
+   ============================================================ */
+
+const R12A_ORIGINAL_ENHANCER =
+    enhanceR8Controls;
+
+enhanceR8Controls=function(base,id){
+
+    if(
+        !internalRoles.includes(ME.role)
+    ){
+        return;
+    }
+
+    const bar=$(
+        '.pagehead .actions'
+    );
+
+    if(!bar){
+        return;
+    }
+
+    const key=
+        String(base||'')
+        +':'
+        +String(id||'');
+
+    if(
+        bar.dataset.r12Enhanced===key
+    ){
+        return;
+    }
+
+    R12A_ORIGINAL_ENHANCER(
+        base,
+        id
+    );
+
+    bar.dataset.r12Enhanced=key;
+};
+
+
+const R12A_ORIGINAL_PAGES={
+    candidate:
+        pageCandidate,
+
+    job:
+        pageJob,
+
+    assignments:
+        pageAssignments,
+
+    finance:
+        pageFinance,
+
+    vms:
+        pageVMS,
+
+    suppliers:
+        pageSuppliers,
+
+    reports:
+        pageReports,
+
+    admin:
+        pageAdmin
+};
+
+
+pageCandidate=async function(id){
+
+    await R12A_ORIGINAL_PAGES
+        .candidate(id);
+
+    enhanceR8Controls(
+        'candidate',
+        id
+    );
+};
+
+
+pageJob=async function(id){
+
+    await R12A_ORIGINAL_PAGES
+        .job(id);
+
+    enhanceR8Controls(
+        'job',
+        id
+    );
+};
+
+
+pageAssignments=async function(){
+
+    await R12A_ORIGINAL_PAGES
+        .assignments();
+
+    enhanceR8Controls(
+        'assignments'
+    );
+};
+
+
+pageFinance=async function(){
+
+    await R12A_ORIGINAL_PAGES
+        .finance();
+
+    enhanceR8Controls(
+        'finance'
+    );
+};
+
+
+pageVMS=async function(){
+
+    await R12A_ORIGINAL_PAGES
+        .vms();
+
+    enhanceR8Controls(
+        'vms'
+    );
+};
+
+
+pageSuppliers=async function(){
+
+    await R12A_ORIGINAL_PAGES
+        .suppliers();
+
+    enhanceR8Controls(
+        'suppliers'
+    );
+};
+
+
+pageReports=async function(){
+
+    await R12A_ORIGINAL_PAGES
+        .reports();
+
+    enhanceR8Controls(
+        'reports'
+    );
+};
+
+
+pageAdmin=async function(){
+
+    await R12A_ORIGINAL_PAGES
+        .admin();
+
+    enhanceR8Controls(
+        'admin'
+    );
+};
+
+
 async function pageAudit(){const rows=await api('/api/audit');$('#content').innerHTML=`<div class="page">${head('Audit Trail','Security › Audit')}${panel('Recent Activity',`<table class="grid"><tr><th>Date</th><th>User</th><th>Action</th><th>Entity</th><th>ID</th><th>Detail</th><th>IP</th></tr>${rows.map(x=>`<tr><td>${new Date(x.created_at).toLocaleString()}</td><td>${esc(x.user_name||x.email||'System')}</td><td>${esc(x.action)}</td><td>${esc(x.entity_type)}</td><td>${x.entity_id||''}</td><td>${esc(x.detail||'')}</td><td>${esc(x.ip||'')}</td></tr>`).join('')}</table>`)}</div>`}
 
 async function pageCandidatePortal(){const d=await api('/api/dashboard');const c=d.candidate;const subs=c.submissions||[];$('#content').innerHTML=`<div class="page"><div class="portal-hero"><h1>Welcome, ${esc(c.first_name)}</h1><p>Search open positions, track your applications and manage your candidate profile.</p></div><div class="three-col">${panel('My Applications',`<div class="bigstat">${subs.length}</div><p>${subs.filter(x=>!['rejected','withdrawn'].includes(x.status)).length} active process(es)</p>`)}${panel('Profile Credibility',`<div class="bigstat">${c.credibility_score}%</div><div class="progress"><i style="width:${c.credibility_score}%"></i></div>`)}${panel('Availability',`<div class="bigstat" style="font-size:20px">${fmtDate(c.availability_date)}</div><p>${esc(c.current_title||'')}</p>`)}</div>${panel('My Applications',`<table class="grid"><tr><th>Job</th><th>Status</th><th>Submitted</th></tr>${subs.map(x=>`<tr><td>${x.job_no} · ${esc(x.job_title)}</td><td>${status(x.status)}</td><td>${fmtDate(x.submitted_at||x.created_at)}</td></tr>`).join('')}</table>`)}<h2>Open Positions</h2><div class="jobcards">${d.jobs.map(j=>`<div class="jobcard"><h3>${esc(j.title)}</h3><small>${j.job_no} · ${esc([j.city,j.state].filter(Boolean).join(', '))} · ${esc(j.work_mode)}</small><p>${money(j.pay_min)}–${money(j.pay_max)} / ${j.rate_type}</p><button class="btn primary" onclick="candidateApply(${j.id},${c.id})">Apply / Interested</button></div>`).join('')}</div></div>`}

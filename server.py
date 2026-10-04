@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 APP_NAME = "ATS One Staffing ERP"
-APP_VERSION = "3.1.0-direct-ui"
+APP_VERSION = "3.2.0-full-ui-depth"
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
 DATA_DIR = BASE_DIR / "data"
@@ -1154,6 +1154,37 @@ class Handler(BaseHTTPRequestHandler):
                 ver=qone(conn,'SELECT * FROM candidate_document_versions WHERE document_id=? AND tenant_id=? ORDER BY version DESC LIMIT 1',(doc['id'],u['tenant_id']))
                 if not ver or ver.get('content') is None:return self._json({'error':'Document content not found'},404)
                 return self._binary(bytes(ver['content']),ver.get('mime_type') or 'application/octet-stream',ver.get('file_name') or doc.get('file_name'))
+
+            # R12B_READ_HELPERS
+            if path=='/api/hotlists-archive':
+                if u['role'] not in RECRUITING_ROLES:
+                    return self._json(
+                        {'error':'Permission denied'},
+                        403
+                    )
+
+                rows=qall(
+                    conn,
+                    '''SELECT
+                           h.*,
+                           u.name owner_name,
+                           (
+                               SELECT COUNT(*)
+                               FROM hotlist_members hm
+                               WHERE hm.hotlist_id=h.id
+                                 AND hm.tenant_id=h.tenant_id
+                           ) member_count
+                       FROM hotlists h
+                       LEFT JOIN users u
+                              ON u.id=h.owner_user_id
+                       WHERE h.tenant_id=?
+                         AND h.archived_at IS NOT NULL
+                       ORDER BY h.updated_at DESC,h.id DESC''',
+                    (u['tenant_id'],)
+                )
+
+                return self._json(rows)
+
             if path=='/api/hotlists':
                 if u['role'] not in RECRUITING_ROLES:return self._json({'error':'Permission denied'},403)
                 rows=qall(conn,'''SELECT h.*,u.name owner_name,(SELECT COUNT(*) FROM hotlist_members hm WHERE hm.hotlist_id=h.id AND hm.tenant_id=h.tenant_id) member_count FROM hotlists h LEFT JOIN users u ON u.id=h.owner_user_id WHERE h.tenant_id=? AND h.archived_at IS NULL ORDER BY h.created_at DESC''',(u['tenant_id'],))
@@ -1249,6 +1280,74 @@ class Handler(BaseHTTPRequestHandler):
                 if u['role']=='client': sql+=' AND j.company_id=?'; params.append(u['company_id'])
                 if u['role']=='candidate': sql+=' AND c.id=?'; params.append(u['candidate_id'])
                 sql+=' ORDER BY i.scheduled_at DESC'; return self._json(qall(conn,sql,params))
+
+            m=re.fullmatch(
+                r'/api/assessments/(\d+)',
+                path
+            )
+
+            if m:
+                if u['role'] not in INTERNAL_ROLES|{'candidate','worker'}:
+                    return self._json(
+                        {'error':'Permission denied'},
+                        403
+                    )
+
+                aid=int(m.group(1))
+
+                assessment=self._tenant_row(
+                    conn,
+                    'assessments',
+                    aid,
+                    u
+                )
+
+                if not assessment:
+                    return self._json(
+                        {'error':'Not found'},
+                        404
+                    )
+
+                if (
+                    u['role'] in ('candidate','worker')
+                    and assessment['candidate_id']
+                        !=u.get('candidate_id')
+                ):
+                    return self._json(
+                        {'error':'Permission denied'},
+                        403
+                    )
+
+                assessment['questions']=qall(
+                    conn,
+                    '''SELECT *
+                       FROM assessment_questions
+                       WHERE assessment_id=?
+                         AND tenant_id=?
+                       ORDER BY sort_order,id''',
+                    (
+                        aid,
+                        u['tenant_id']
+                    )
+                )
+
+                assessment['answers']=qall(
+                    conn,
+                    '''SELECT *
+                       FROM assessment_answers
+                       WHERE assessment_id=?
+                         AND tenant_id=?
+                       ORDER BY question_id,id''',
+                    (
+                        aid,
+                        u['tenant_id']
+                    )
+                )
+
+                return self._json(
+                    assessment
+                )
+
             if path=='/api/assessments':
                 if u['role'] not in INTERNAL_ROLES|{'candidate','worker'}:return self._json({'error':'Permission denied'},403)
                 sql='''SELECT a.*,c.first_name,c.last_name,j.job_no,j.title job_title FROM assessments a JOIN candidates c ON c.id=a.candidate_id LEFT JOIN jobs j ON j.id=a.job_id WHERE a.tenant_id=?''';params=[u['tenant_id']]
@@ -1312,6 +1411,53 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/tasks':
                 if u['role'] not in INTERNAL_ROLES:return self._json({'error':'Permission denied'},403)
                 return self._json(qall(conn,'SELECT t.*,u.name owner_name FROM tasks t LEFT JOIN users u ON u.id=t.owner_user_id WHERE t.tenant_id=? AND lower(t.status)!="archived" ORDER BY CASE t.status WHEN "Open" THEN 0 ELSE 1 END,t.due_at',(u['tenant_id'],)))
+
+            if path=='/api/automation-runs':
+                if u['role'] not in ('admin','teamlead'):
+                    return self._json(
+                        {'error':'Permission denied'},
+                        403
+                    )
+
+                automation_id=int(
+                    (
+                        qs.get('automation_id')
+                        or [0]
+                    )[0]
+                    or 0
+                )
+
+                sql='''SELECT
+                           r.*,
+                           a.name automation_name,
+                           u.name user_name
+                       FROM automation_runs r
+                       JOIN automations a
+                         ON a.id=r.automation_id
+                       LEFT JOIN users u
+                         ON u.id=r.user_id
+                       WHERE r.tenant_id=?'''
+
+                params=[
+                    u['tenant_id']
+                ]
+
+                if automation_id:
+                    sql+=' AND r.automation_id=?'
+                    params.append(
+                        automation_id
+                    )
+
+                sql+=' ORDER BY r.id DESC LIMIT 200'
+
+                return self._json(
+                    qall(
+                        conn,
+                        sql,
+                        params
+                    )
+                )
+
             if path=='/api/automations':
                 if u['role'] not in ('admin','teamlead'):return self._json({'error':'Permission denied'},403)
                 return self._json(qall(conn,'SELECT * FROM automations WHERE tenant_id=? ORDER BY id DESC',(u['tenant_id'],)))
