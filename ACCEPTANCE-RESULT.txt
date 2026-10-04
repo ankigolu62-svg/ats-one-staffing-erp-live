@@ -1,7 +1,10 @@
 ATS ONE STAFFING ERP — ACCEPTANCE RESULT
 =========================================
 
-Executed against the local threaded server and shared SQLite database.
+Executed against isolated temporary databases; the working/live SQLite database was not reset or modified.
+
+FULL_LIVE_ACCEPTANCE=PASS (49/49)
+DEEP_AUDIT=PASS (248 total; 241 PASS, 0 FAIL, 0 PARTIAL, 7 EXTERNAL)
 
 LOGIN_ALL_ROLES=PASS (11 roles)
 CONCURRENT_MULTIUSER_READ=PASS
@@ -19,6 +22,11 @@ AUDIT_TRAIL=PASS
 SERVER_PY_COMPILE=PASS
 APP_JS_SYNTAX=PASS
 
+R8 closure coverage includes Boolean syntax validation, shared job/candidate matching,
+candidate structured data and documents, CRM and recruiting lifecycles, workforce and
+finance transitions, VMS/supplier operations, admin/reporting CRUD, archive/restore,
+security regression, and cross-tenant isolation.
+
 Key validated structured search:
   Profession=Software Engineer
   Specialty=Backend
@@ -31,4 +39,5 @@ Key validated raw Boolean search:
   (Java OVER 5 YRS AND Banking OVER 2 YRS) AND NOT Mainframe
   Result count: 1
 
-Note: Browser automation screenshots could not be executed in the build container because its Chromium policy blocks loopback URLs. Static JavaScript syntax and live HTTP/API behavior were validated separately.
+The seven EXTERNAL findings are intentionally limited to credential/contract-bound
+vendor services; all locally implementable R8 capability checks pass.

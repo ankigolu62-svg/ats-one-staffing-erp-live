@@ -1,5 +1,7 @@
 # ATS One Staffing ERP
 
+Application version: **3.0.0-full**
+
 A local, shared-database, multi-user staffing ERP built around the same broad operating model as enterprise staffing platforms: sourcing, candidate records, jobs, CRM, submittals, interviews, onboarding, assignments, time/expense, finance, VMS/MSP mapping, supplier access, reporting, audit and role portals.
 
 ## Windows — fastest start
@@ -46,4 +48,17 @@ See `FUNCTION-MAP.md`, `ARCHITECTURE.md`, `DEMO-USERS.txt` and `ACCEPTANCE-RESUL
 
 Use `DEPLOY-FREE-LIVE.ps1`. This hardened package is designed to run on a free Render web service and persist its SQLite database privately to Supabase Storage across free-instance restarts/spin-downs. The deployment controller creates/pushes a GitHub repository, provisions/uses a Supabase project, creates the Render service, and fails closed unless `/api/health` reports `persistence=supabase-storage`.
 
-This is a free testing/evaluation architecture, not high-scale production. The included deep audit must show `FAIL=0`; remaining `PARTIAL`/`EXTERNAL` items are still explicitly reported and are not treated as completed functionality.
+This is a free testing/evaluation architecture, not high-scale production. Internal R8 workflows are exercised with an isolated temporary database:
+
+```bash
+python deep_audit.py
+python full_live_acceptance.py --json-out full-live-local.json
+```
+
+Read-only live verification is available without mutating operational data:
+
+```bash
+python full_live_acceptance.py --base-url https://your-service.example --live-readonly --json-out live-readonly.json
+```
+
+Real paid-vendor network calls remain explicitly `EXTERNAL`; connector configuration and internal adapter state do not pretend those calls occurred.

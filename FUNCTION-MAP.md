@@ -9,12 +9,14 @@
 - Certifications: status, expiry and documentation flag
 - Structured qualifications
 - Candidate attributes / tags
-- Candidate documents metadata
+- Candidate document metadata plus SQLite-backed binary versions, verification and download
 - Notes, tasks and communication history
 - Credibility score
 - Static hotlists
 - Dynamic talent pools saved from search criteria
-- Candidate-to-job matching view
+- Candidate-to-job matching through the same server-side evidence/scoring engine used by Talent Search
+- Deterministic resume extraction with an explicit recruiter review/commit step
+- Role-secured structured CRUD and candidate archive/restore
 
 ## Deep Talent Search
 Eight JobDiva-style search areas are represented:
@@ -29,7 +31,7 @@ Eight JobDiva-style search areas are represented:
 
 Additional refinements:
 - state
-- ZIP / radius UI
+- ZIP / radius validation and Haversine distance filtering for resolved postal coordinates
 - pay range
 - availability date
 - mapping on/off
@@ -43,6 +45,7 @@ Working Boolean examples:
 ```
 
 Result actions include Exclude, Qualify, Expand, Hotlist, Preview, Relevancy, Bulk Action entry point and Email Merge logging.
+Exclusions persist in the active criteria; Expand and Relevancy expose structured evidence; bulk actions execute on the server.
 
 ## Jobs / Recruiting
 - Job creation
@@ -57,7 +60,9 @@ Result actions include Exclude, Qualify, Expand, Hotlist, Preview, Relevancy, Bu
 - RTR and compliance status
 - client feedback
 - interview scheduling
-- job distribution records
+- job distribution publish/unpublish/sync-state records
+- job role assignment, full edit, clone and archive/restore
+- guarded interested/submission/interview/offer/hire/start/assignment transitions
 
 ## CRM / Sales
 - Company creation
@@ -68,7 +73,8 @@ Result actions include Exclude, Qualify, Expand, Hotlist, Preview, Relevancy, Bu
 - discount/rate rule storage
 - Leads
 - Opportunities with stage, value, probability and expected close
-- dashboard sales pipeline
+- dashboard sales pipeline derived from current tenant data
+- lead update/conversion and opportunity stage/won/lost lifecycle
 
 ## Candidate profile areas
 - Resume
@@ -83,8 +89,8 @@ Result actions include Exclude, Qualify, Expand, Hotlist, Preview, Relevancy, Bu
 
 ## Assessments / Interviews
 - questionnaires / technical / recorded-video / live-interview types
-- invite status and scoring
-- interview type, schedule, timezone, interviewer and link/location
+- questions, answers, score, completion and recruiter review
+- interview type, schedule, timezone, interviewer, link/location, feedback, rating and guarded status lifecycle
 
 ## Onboarding
 - package assignment
@@ -93,6 +99,7 @@ Result actions include Exclude, Qualify, Expand, Hotlist, Preview, Relevancy, Bu
 - mandatory flag
 - completion status
 - automatic package completion when all requirements are complete
+- requirement CRUD, evidence-document link and expiry
 
 ## Workforce
 - Start object
@@ -107,18 +114,20 @@ Result actions include Exclude, Qualify, Expand, Hotlist, Preview, Relevancy, Bu
 - PO number
 - shifts
 - assignment status lifecycle
+- start create/update/cancel/complete and assignment transition history
+- shift and attendance CRUD
 
 ## Time / Expense
 - worker time entry by day
 - automatic regular/overtime split after 40h
-- submit / approve / reject
+- draft / submit / approve / reject / reopen with guarded role transitions
 - client/approver portal
 - expenses with category, amount, receipt reference and approval status
 
 ## Finance
 - purchase orders
 - invoices
-- issue status and due date
+- issue, partial/full payment, void, due/aging state and payment history
 - assignment margin/spread view
 - bill and pay sides remain separate
 
@@ -131,6 +140,8 @@ Result actions include Exclude, Qualify, Expand, Hotlist, Preview, Relevancy, Bu
 - job release to supplier
 - supplier portal
 - VMS-released jobs
+- internal VMS CRUD, mapping CRUD, sync/retry history and error state
+- supplier activate/deactivate, release/unrelease and submission-limit enforcement
 
 ## Portals / Roles
 - Admin
@@ -154,10 +165,18 @@ Result actions include Exclude, Qualify, Expand, Hotlist, Preview, Relevancy, Bu
 - threaded local server
 - SQLite WAL concurrent access
 - audit trail
-- UDF definitions
-- automation-rule registry
-- integration registry
+- typed UDF definition/value CRUD
+- automation CRUD, safe internal execution, dry-run and run history
+- connector configuration, credential-reference metadata, test/sync state and logs
+- saved parameterized operational reports and CSV export
+- tenant-scoped sessions, reads and writes with a forward-migrated default tenant
 - reset/seed support
+
+## Verification
+
+- `deep_audit.py` retains the legacy audit and consumes executable R8 acceptance results.
+- `full_live_acceptance.py` starts an isolated temporary database in local mode and supports non-mutating `--live-readonly` checks.
+- Current application version: `3.0.0-full`.
 
 ## External services requiring real credentials
 The internal workflow and mapping exist, but live calls require customer/vendor credentials for: real job boards, LinkedIn, Fieldglass/Beeline, background screening, payroll/GL, production email/SMS/VOIP, government verification and production e-sign services.

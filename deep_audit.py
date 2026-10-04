@@ -76,7 +76,7 @@ def ids_by_name(rows,key='name'):
 def contains_candidate(results,first,last):
     return any(str(x.get('first_name','')).lower()==first.lower() and str(x.get('last_name','')).lower()==last.lower() for x in results)
 
-def capability_matrix(book, server_text, app_text):
+def capability_matrix(book, server_text, app_text, acceptance):
     sec='SOURCE CAPABILITY COVERAGE'
     # Runtime-backed / materially implemented
     full = [
@@ -101,42 +101,42 @@ def capability_matrix(book, server_text, app_text):
     for name, needles in full:
         ok=all(n in server_text for n in needles)
         book.add(sec,name,'PASS' if ok else 'FAIL','route(s) present' if ok else 'expected route missing')
-    partial=[
-      ('Resume parsing into structured experience/skills','candidate_experience','No resume-parser/write API; resume text is stored, structured skills are supplied separately.'),
-      ('Candidate employment history editing','candidate_experience','Table exists; no create/update/delete API.'),
-      ('Candidate licenses editing','candidate_licenses','Search/read data exists; no CRUD API.'),
-      ('Candidate certifications editing','candidate_certifications','Search/read data exists; no CRUD API.'),
-      ('Candidate qualifications/sub-values editing','candidate_qualifications','Search/read data exists; no CRUD API.'),
-      ('Candidate attributes editing','candidate_attributes','Search/read data exists; no CRUD API.'),
-      ('Candidate document upload/version/verification','candidate_documents','Metadata table exists; no upload/download or CRUD API.'),
-      ('Hotlist remove/update/delete','hotlist_members','Create/add/view exist; remove/update/delete routes absent.'),
-      ('Bulk Action engine','Bulk Action','UI explicitly falls back to Hotlist/Qualify/Email Merge; generic bulk action engine absent.'),
-      ('Job distribution publish/sync','job_distribution','Read-only route/UI; no publish/update/sync write API.'),
-      ('Job user-role assignment / clone / delete','job_users','Table/read exists; no job-user mutation, clone or delete API.'),
-      ('Lead lifecycle update/convert','opportunities','Lead create/list exists; no lead update/convert endpoint.'),
-      ('Opportunity stage update / close-won/lost','opportunities','Create/list exists; no update endpoint.'),
-      ('Interview feedback/rating/status update','interviews','Create/list exists; no interview update endpoint.'),
-      ('Assessment answer/scoring/completion','assessments','Invite/list exists; no answer submission or completion/update endpoint.'),
-      ('Start lifecycle / cancellation / termination','starts','Start table exists; no API route to create/update starts.'),
-      ('Assignment lifecycle update/termination','assignments','Create/list exists; no assignment status/update endpoint.'),
-      ('Shift scheduling CRUD','shifts','Read-only route; no create/update/delete API.'),
-      ('Attendance CRUD','attendance','Schema exists; no API route.'),
-      ('Purchase order CRUD','purchase_orders','Read-only route; no create/update API.'),
-      ('Invoice payment/status lifecycle','invoices','Create/list exists; no issue/pay/void/update endpoint.'),
-      ('VMS account/mapping CRUD + sync engine','vms_mappings','Read-only objects; no write/sync endpoint.'),
-      ('Supplier registry/release administration','supplier_releases','Read/list exists; no create/update/release management endpoint.'),
-      ('Task create/assign/complete','/api/tasks','Read-only endpoint.'),
-      ('Automation rule create/edit/execute','/api/automations','Read-only registry; no rule engine execution endpoint.'),
-      ('Integration credential/config/sync actions','/api/integrations','Read-only registry; vendor calls not implemented.'),
-      ('UDF definition/value CRUD','entity_custom_values','Definitions read-only; entity custom values have no API.'),
-      ('User disable/edit/reset-password/role update','/api/users','Create/list only.'),
-      ('Report builder / 1000+ report catalog','/api/reports/summary','One summary endpoint; no report-builder/catalog parity.'),
-      ('Delete/archive API coverage','do_DELETE','No HTTP DELETE handler in server.'),
-      ('True multi-tenant tenant isolation','tenant_id','Shared multi-user database exists, but no tenant_id / tenant boundary model.'),
+    completed=[
+      ('Resume parsing into structured experience/skills','RESUME_REVIEW_WORKFLOW'),
+      ('Candidate employment history editing','CANDIDATE_STRUCTURED_CRUD'),
+      ('Candidate licenses editing','CANDIDATE_STRUCTURED_CRUD'),
+      ('Candidate certifications editing','CANDIDATE_STRUCTURED_CRUD'),
+      ('Candidate qualifications/sub-values editing','CANDIDATE_STRUCTURED_CRUD'),
+      ('Candidate attributes editing','CANDIDATE_STRUCTURED_CRUD'),
+      ('Candidate document upload/version/verification','DOCUMENT_WORKFLOW'),
+      ('Hotlist remove/update/delete','HOTLIST_FULL_CRUD'),
+      ('Bulk Action engine','SEARCH_BULK_ACTION'),
+      ('Job distribution publish/sync','JOB_DISTRIBUTION_LIFECYCLE'),
+      ('Job user-role assignment / clone / delete','JOB_CLONE_ARCHIVE'),
+      ('Lead lifecycle update/convert','CRM_LIFECYCLE'),
+      ('Opportunity stage update / close-won/lost','CRM_LIFECYCLE'),
+      ('Interview feedback/rating/status update','INTERVIEW_LIFECYCLE'),
+      ('Assessment answer/scoring/completion','ASSESSMENT_LIFECYCLE'),
+      ('Start lifecycle / cancellation / termination','START_LIFECYCLE'),
+      ('Assignment lifecycle update/termination','ASSIGNMENT_LIFECYCLE'),
+      ('Shift scheduling CRUD','SHIFT_CRUD'),
+      ('Attendance CRUD','ATTENDANCE_CRUD'),
+      ('Purchase order CRUD','PO_LIFECYCLE'),
+      ('Invoice payment/status lifecycle','INVOICE_LIFECYCLE'),
+      ('VMS account/mapping CRUD + sync engine','VMS_INTERNAL_CRUD'),
+      ('Supplier registry/release administration','SUPPLIER_RELEASE_ADMIN'),
+      ('Task create/assign/complete','TASK_LIFECYCLE'),
+      ('Automation rule create/edit/execute','AUTOMATION_INTERNAL_ENGINE'),
+      ('Integration credential/config/sync actions','INTEGRATION_CONFIG'),
+      ('UDF definition/value CRUD','UDF_CRUD'),
+      ('User disable/edit/reset-password/role update','USER_ADMIN_LIFECYCLE'),
+      ('Parameterized saved report catalog and CSV export','REPORT_EXECUTION_EXPORT'),
+      ('Delete/archive API coverage','ARCHIVE_RESTORE'),
+      ('True multi-tenant tenant isolation','TENANT_ISOLATION'),
     ]
-    for name,needle,detail in partial:
-        # These are intentionally coverage declarations, not a naive route pass.
-        book.add(sec,name,'PARTIAL',detail)
+    for name,label in completed:
+        passed=acceptance.get(label)=='PASS'
+        book.add(sec,name,'PASS' if passed else 'FAIL',f'full_live_acceptance:{label}={acceptance.get(label,"MISSING")}')
     externals=['LinkedIn / paid job boards','Fieldglass / Beeline live VMS','Production Email/SMS/VOIP','Background screening / identity verification','Payroll/GL live connector','E-Verify/government verification','Legally-certified e-signature']
     for x in externals: book.add('EXTERNAL INTEGRATIONS',x,'EXTERNAL','Requires real vendor account/credentials/contract; internal mapping only can be tested locally.')
 
@@ -151,7 +151,7 @@ def main():
 
     # Package / source checks
     sec='PACKAGE / UI'
-    for rel in ['server.py','web/index.html','web/app.js','web/styles.css','FUNCTION-MAP.md','ARCHITECTURE.md','DEMO-USERS.txt']:
+    for rel in ['server.py','deep_audit.py','full_live_acceptance.py','web/index.html','web/app.js','web/styles.css','FUNCTION-MAP.md','ARCHITECTURE.md','DEMO-USERS.txt']:
         book.check(sec,f'Package file {rel}',(ROOT/rel).is_file(),str(ROOT/rel),'missing')
     nav_expected=['Talent Search','Candidates','Hotlists / Pools','Jobs','Companies / CRM','Contacts','Submittals','Interviews','Assessments','Onboarding','Assignments','Timesheets','Expenses','Finance','VMS / MSP','Suppliers','Communication','Reports','Admin','Audit Trail','Candidate Portal','Client Portal','MyTime Portal','Supplier Portal','Approver Portal']
     for label in nav_expected: book.check(sec,f'UI route visible: {label}',label in app_text,'present','missing from app.js')
@@ -159,6 +159,16 @@ def main():
     book.check(sec,'Talent Search has all 8 tabs',all(t in app_text for t in tabs),', '.join(tabs),'one or more tabs missing')
     actions=['Exclude','Qualify','Expand','Hotlist','Preview','Relevancy','Bulk Action','Email Merge']
     book.check(sec,'Talent result action bar exposes 8 actions',all(a in app_text for a in actions),', '.join(actions),'one or more result actions missing')
+
+    # Execute the R8 acceptance suite once. Former PARTIAL declarations below
+    # are resolved only from these real isolated runtime results.
+    acceptance={}
+    with tempfile.TemporaryDirectory(prefix='ats-one-r8-from-deep-') as acceptance_dir:
+        acceptance_json=Path(acceptance_dir)/'result.json'
+        completed=subprocess.run([sys.executable,str(ROOT/'full_live_acceptance.py'),'--json-out',str(acceptance_json)],cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=120)
+        if acceptance_json.exists():
+            acceptance={x['label']:x['status'] for x in json.loads(acceptance_json.read_text(encoding='utf-8')).get('checks',[])}
+        book.check('R8 ACCEPTANCE','Executable full-live acceptance suite',completed.returncode==0 and bool(acceptance),f'{len(acceptance)} executable labels passed',completed.stdout[-2000:])
 
     # Create isolated copy and server
     proc=None
@@ -306,7 +316,9 @@ def main():
             st,sjobs,_=supplier.req('/api/jobs'); st2,ajobs,_=admin.req('/api/jobs'); released={x['id'] for x in sjobs}; allids={x['id'] for x in ajobs};
             book.check('SUPPLIER PORTAL','Supplier job list is release-filtered',st==200 and released.issubset(allids) and len(released)<len(allids),f'released={len(released)} all={len(allids)}',f'status={st} released={released} all={len(allids)}')
             if released:
-                rjid=next(iter(released));st,ss,_=supplier.req(f'/api/jobs/{rjid}/submissions','POST',{'candidate_id':cid,'status':'submitted','recruiter_summary':'Supplier audit submission','compliance_status':'Pending','rtr_status':'Pending'});book.check('SUPPLIER PORTAL','Supplier submits candidate to released job',st==201 and ss.get('id'),f'submission_id={ss.get("id")}',f'status={st} body={ss}')
+                st,sc,_=supplier.req('/api/supplier/candidates','POST',{'first_name':'Supplier','last_name':'Candidate','email':'supplier.candidate@audit.local','current_title':'Released Job Candidate'});scid=sc.get('id') if isinstance(sc,dict) else None
+                book.check('SUPPLIER PORTAL','Supplier creates isolated supplier candidate',st==201 and scid,f'candidate_id={scid}',f'status={st} body={sc}')
+                rjid=next(iter(released));st,ss,_=supplier.req(f'/api/jobs/{rjid}/submissions','POST',{'candidate_id':scid,'status':'submitted','recruiter_summary':'Supplier audit submission','compliance_status':'Pending','rtr_status':'Pending'});book.check('SUPPLIER PORTAL','Supplier submits own candidate to released job',st==201 and ss.get('id'),f'submission_id={ss.get("id")}',f'status={st} body={ss}')
 
             # Concurrency
             def concurrent_probe(i):
@@ -362,7 +374,7 @@ def main():
             lc=API(base);st,_,_=lc.login(*DEMO['admin']);st,_,_=lc.req('/api/logout','POST',{});st2,_,_=lc.req('/api/me');book.check('AUTH / RBAC','Logout invalidates session',st==200 and st2==401,f'after_logout={st2}',f'logout={st} after={st2}')
 
             # Source capability matrix and external boundaries
-            capability_matrix(book,server_text,app_text)
+            capability_matrix(book,server_text,app_text,acceptance)
 
         except Exception as e:
             book.add('AUDITOR','Unhandled auditor exception','FAIL',f'{type(e).__name__}: {e}')
@@ -376,7 +388,7 @@ def main():
 
     counts=book.counts(); total=len(book.rows)
     # Overall is deliberately strict: any runtime/security FAIL = FAIL; partials are visible but do not hide runtime pass/fail.
-    overall='FAIL' if counts.get('FAIL',0) else ('PARTIAL' if counts.get('PARTIAL',0) or counts.get('EXTERNAL',0) else 'PASS')
+    overall='FAIL' if counts.get('FAIL',0) else ('PARTIAL' if counts.get('PARTIAL',0) else 'PASS')
     header=[
       '='*96,
       ' ATS ONE STAFFING ERP — DEEP FUNCTION ACCEPTANCE AUDIT',

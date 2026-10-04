@@ -2,9 +2,10 @@
 
 This package is a hardened public-preview build of ATS One.
 Validated local deep audit at build time:
+  TOTAL=248
   FAIL=0
-  PASS=206
-  PARTIAL=31
+  PASS=241
+  PARTIAL=0
   EXTERNAL=7
 
 Important:
@@ -12,7 +13,7 @@ Important:
 - SQLite remains the application database for compatibility.
 - Supabase Storage privately persists/checkpoints the SQLite DB so a Render Free restart/spin-down can restore it.
 - This is suitable for free testing/demo/internal evaluation, not high-scale production.
-- 31 capability areas remain PARTIAL according to the included deep auditor.
+- Internal R8 capability areas are exercised by full_live_acceptance.py in an isolated temporary database.
 - External vendor integrations require real vendor credentials/contracts.
 
 Run DEPLOY-FREE-LIVE.ps1 from PowerShell. It will:

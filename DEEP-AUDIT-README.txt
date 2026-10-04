@@ -15,7 +15,8 @@ What it does:
 - runs 24 concurrent sessions
 - validates audit logging
 - executes negative RBAC/data-isolation probes
-- marks source-only/incomplete capabilities as PARTIAL rather than PASS
+- runs full_live_acceptance.py and resolves former internal gaps only from executable isolated-runtime labels
+- verifies Boolean syntax errors, shared matching, tenant isolation, lifecycle transitions, CRUD, reports and the R8 theme
 - marks real vendor integrations as EXTERNAL when credentials/contracts are required
 
 Outputs:
@@ -25,4 +26,4 @@ Outputs:
 The TXT report automatically opens in Notepad.
 Exit code 0 = no actual FAIL findings.
 Exit code 2 = one or more actual FAIL findings exist; read the report.
-PARTIAL and EXTERNAL are reported separately.
+Internal PARTIAL and real credential-bound EXTERNAL results are reported separately.
