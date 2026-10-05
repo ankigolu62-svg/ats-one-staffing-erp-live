@@ -202,7 +202,7 @@ def main():
             readonly_suite(args.base_url,result)
         else:
             with tempfile.TemporaryDirectory(prefix='ats-one-r8-',ignore_cleanup_errors=True) as temp:
-                run=Path(temp);shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copy2(ROOT/'parity_api.py',run/'parity_api.py') if (ROOT/'parity_api.py').exists() else None;shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir();port=free_port();base=f'http://127.0.0.1:{port}'
+                run=Path(temp);shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copy2(ROOT/'parity_api.py',run/'parity_api.py') if (ROOT/'parity_api.py').exists() else None;shutil.copy2(ROOT/'r14_api.py',run/'r14_api.py') if (ROOT/'r14_api.py').exists() else None;shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir();port=free_port();base=f'http://127.0.0.1:{port}'
                 log=open(run/'server.log','w',encoding='utf-8');proc=subprocess.Popen([sys.executable,'server.py','--host','127.0.0.1','--port',str(port),'--reset','--quiet'],cwd=run,stdout=log,stderr=subprocess.STDOUT)
                 if not wait_ready(base):raise RuntimeError((run/'server.log').read_text(encoding='utf-8',errors='replace'))
                 local_suite(base,run/'data'/'ats_one.db',result)

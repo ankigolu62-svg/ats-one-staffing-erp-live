@@ -5,9 +5,10 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from parity_api import ensure_parity_schema, parity_get, parity_post, parity_patch, parity_delete
+from r14_api import ensure_r14_schema, r14_public_post, r14_get, r14_post, r14_patch, r14_delete, r14_mfa_required, r14_verify_totp
 
 APP_NAME = "ATS One Staffing ERP"
-APP_VERSION = "4.1.0-r13r7-public-parity"
+APP_VERSION = "5.0.0-r14-full-public-parity"
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
 DATA_DIR = BASE_DIR / "data"
@@ -473,6 +474,7 @@ def migrate_db(conn):
 
 
     ensure_parity_schema(conn)
+    ensure_r14_schema(conn)
 
 def utcnow():
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -1129,6 +1131,7 @@ class Handler(BaseHTTPRequestHandler):
             u=self._need(conn)
             if not u: return
             if parity_get(self,conn,u,path,qs): return
+            if r14_get(self,conn,u,path,qs): return
             if path=='/api/dashboard': return self._json(self.dashboard(conn,u))
             if path=='/api/supplier/candidates':
                 if u['role']!='supplier':return self._json({'error':'Permission denied'},403)
@@ -1736,10 +1739,13 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         p=urllib.parse.urlparse(self.path); path=p.path; data=self._body(); conn=db()
         try:
+            if r14_public_post(self,conn,path,data): return
             if path=='/api/login':
                 email=(data.get('email') or '').strip().lower(); pw=data.get('password') or ''
                 u=qone(conn,'SELECT * FROM users WHERE lower(email)=? AND active=1',(email,))
                 if not u or not verify_password(pw,u['pass_hash']): return self._json({'error':'Invalid email or password'},401)
+                mfa=r14_mfa_required(conn,u)
+                if mfa and not r14_verify_totp(mfa['secret'],data.get('mfa_code')): return self._json({'error':'MFA code required or invalid','mfa_required':True},401)
                 tok=secrets.token_urlsafe(32); exp=(datetime.now(timezone.utc)+timedelta(hours=18)).replace(microsecond=0).isoformat()
                 conn.execute('INSERT INTO sessions(token,user_id,expires_at,created_at,tenant_id) VALUES(?,?,?,?,?)',(tok,u['id'],exp,utcnow(),u['tenant_id'])); audit(conn,u['id'],'LOGIN','user',u['id'],'Successful login',self.client_address[0]);conn.commit();u.pop('pass_hash',None)
                 return self._json({'user':u},200,{'Set-Cookie':f'ats_session={tok}; Path=/; HttpOnly; SameSite=Lax; Max-Age=64800' + ('; Secure' if os.environ.get('RENDER') or os.environ.get('FORCE_SECURE_COOKIE')=='1' else '')})
@@ -1750,6 +1756,7 @@ class Handler(BaseHTTPRequestHandler):
             u=self._need(conn)
             if not u:return
             if parity_post(self,conn,u,path,data): return
+            if r14_post(self,conn,u,path,data): return
             if path=='/api/search/talent':
                 if u['role'] not in ('admin','teamlead','recruiter','sales','hr'): return self._json({'error':'Permission denied'},403)
                 data=dict(data);data['_tenant_id']=u['tenant_id']
@@ -2213,6 +2220,7 @@ class Handler(BaseHTTPRequestHandler):
             u=self._need(conn)
             if not u:return
             if parity_patch(self,conn,u,path,data): return
+            if r14_patch(self,conn,u,path,data): return
             m=re.fullmatch(r'/api/candidates/(\d+)',path)
             if m:
                 cid=int(m.group(1))
@@ -2396,6 +2404,7 @@ class Handler(BaseHTTPRequestHandler):
             u=self._need(conn)
             if not u:return
             if parity_delete(self,conn,u,path,qs): return
+            if r14_delete(self,conn,u,path,qs): return
             m=re.fullmatch(r'/api/(candidates|jobs|hotlists)/(\d+)',path)
             if m:
                 kind,row_id=m.group(1),int(m.group(2));table=kind;roles=CANDIDATE_EDIT_ROLES if kind=='candidates' else (JOB_EDIT_ROLES if kind=='jobs' else RECRUITING_ROLES)

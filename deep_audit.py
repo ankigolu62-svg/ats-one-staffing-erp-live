@@ -173,7 +173,7 @@ def main():
     proc=None
     with tempfile.TemporaryDirectory(prefix='ats-one-deep-audit-') as td:
         run=Path(td)/'app';run.mkdir()
-        shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copy2(ROOT/'parity_api.py',run/'parity_api.py') if (ROOT/'parity_api.py').exists() else None;shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir()
+        shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copy2(ROOT/'parity_api.py',run/'parity_api.py') if (ROOT/'parity_api.py').exists() else None;shutil.copy2(ROOT/'r14_api.py',run/'r14_api.py') if (ROOT/'r14_api.py').exists() else None;shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir()
         port=free_port();base=f'http://127.0.0.1:{port}'
         logf=open(Path(td)/'server.log','w',encoding='utf-8')
         proc=subprocess.Popen([sys.executable,'server.py','--host','127.0.0.1','--port',str(port),'--reset','--quiet'],cwd=run,stdout=logf,stderr=subprocess.STDOUT)
