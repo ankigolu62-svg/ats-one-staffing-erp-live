@@ -775,4 +775,4 @@ async function pageApproverPortal(){const [ts,ex]=await Promise.all([api('/api/t
 
 async function globalSearch(){const q=$('#globalQ').value.trim();if(!q)return;const rows=await api('/api/candidates?q='+encodeURIComponent(q));modal('Global Search — Candidates',`<table class="grid"><tr><th>Name</th><th>Title</th><th>Location</th></tr>${rows.map(c=>`<tr><td><a class="link" onclick="closeModal();go('candidate/${c.id}')">${esc(c.first_name+' '+c.last_name)}</a></td><td>${esc(c.current_title||'')}</td><td>${esc([c.city,c.state].filter(Boolean).join(', '))}</td></tr>`).join('')}</table>`,`<button class="btn" onclick="closeModal()">Close</button>`,true)}
 
-boot();
+// R14_BOOT_DEFERRED_UNTIL_ALL_OVERLAYS_LOADED
