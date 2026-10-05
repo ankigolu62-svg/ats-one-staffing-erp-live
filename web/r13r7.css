@@ -1,0 +1,12 @@
+.r7-panel{margin-top:14px}
+.r7-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.r7-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.r7-section{border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:10px}
+.r7-section h4{margin:0 0 8px;font-size:13px}
+.r7-table{width:100%;border-collapse:collapse;font-size:12px}
+.r7-table th,.r7-table td{border:1px solid #e5e7eb;padding:6px;text-align:left;vertical-align:top}
+.r7-table th{background:#f8fafc}
+.r7-empty{color:#64748b;padding:8px 0}
+.r7-badge{display:inline-block;padding:2px 6px;border-radius:10px;background:#eef2ff;font-size:11px}
+.r7-file{display:flex;gap:8px;align-items:center}
+@media(max-width:1000px){.r7-grid{grid-template-columns:1fr}}

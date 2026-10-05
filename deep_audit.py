@@ -151,7 +151,7 @@ def main():
 
     # Package / source checks
     sec='PACKAGE / UI'
-    for rel in ['server.py','deep_audit.py','full_live_acceptance.py','web/index.html','web/app.js','web/styles.css','FUNCTION-MAP.md','ARCHITECTURE.md','DEMO-USERS.txt']:
+    for rel in ['server.py','parity_api.py','deep_audit.py','full_live_acceptance.py','web/index.html','web/app.js','web/styles.css','web/r13r7.js','web/r13r7.css','FUNCTION-MAP.md','ARCHITECTURE.md','DEMO-USERS.txt']:
         book.check(sec,f'Package file {rel}',(ROOT/rel).is_file(),str(ROOT/rel),'missing')
     nav_expected=['Talent Search','Candidates','Hotlists / Pools','Jobs','Companies / CRM','Contacts','Submittals','Interviews','Assessments','Onboarding','Assignments','Timesheets','Expenses','Finance','VMS / MSP','Suppliers','Communication','Reports','Admin','Audit Trail','Candidate Portal','Client Portal','MyTime Portal','Supplier Portal','Approver Portal']
     for label in nav_expected: book.check(sec,f'UI route visible: {label}',label in app_text,'present','missing from app.js')
@@ -163,18 +163,17 @@ def main():
     # Execute the R8 acceptance suite once. Former PARTIAL declarations below
     # are resolved only from these real isolated runtime results.
     acceptance={}
-    with tempfile.TemporaryDirectory(prefix='ats-one-r8-from-deep-') as acceptance_dir:
-        acceptance_json=Path(acceptance_dir)/'result.json'
-        completed=subprocess.run([sys.executable,str(ROOT/'full_live_acceptance.py'),'--json-out',str(acceptance_json)],cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=120)
-        if acceptance_json.exists():
-            acceptance={x['label']:x['status'] for x in json.loads(acceptance_json.read_text(encoding='utf-8')).get('checks',[])}
-        book.check('R8 ACCEPTANCE','Executable full-live acceptance suite',completed.returncode==0 and bool(acceptance),f'{len(acceptance)} executable labels passed',completed.stdout[-2000:])
+    acceptance_json=outdir/f'FULL-LIVE-ACCEPTANCE-{ts}.json'
+    completed=subprocess.run([sys.executable,str(ROOT/'full_live_acceptance.py'),'--json-out',str(acceptance_json)],cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=120)
+    if acceptance_json.exists():
+        acceptance={x['label']:x['status'] for x in json.loads(acceptance_json.read_text(encoding='utf-8')).get('checks',[])}
+    book.check('R8 ACCEPTANCE','Executable full-live acceptance suite',completed.returncode==0 and bool(acceptance),f'{len(acceptance)} executable labels passed',completed.stdout[-2000:])
 
     # Create isolated copy and server
     proc=None
     with tempfile.TemporaryDirectory(prefix='ats-one-deep-audit-') as td:
         run=Path(td)/'app';run.mkdir()
-        shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir()
+        shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copy2(ROOT/'parity_api.py',run/'parity_api.py') if (ROOT/'parity_api.py').exists() else None;shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir()
         port=free_port();base=f'http://127.0.0.1:{port}'
         logf=open(Path(td)/'server.log','w',encoding='utf-8')
         proc=subprocess.Popen([sys.executable,'server.py','--host','127.0.0.1','--port',str(port),'--reset','--quiet'],cwd=run,stdout=logf,stderr=subprocess.STDOUT)

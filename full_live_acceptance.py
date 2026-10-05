@@ -201,8 +201,8 @@ def main():
             if not args.base_url:parser.error('--base-url is required with --live-readonly')
             readonly_suite(args.base_url,result)
         else:
-            with tempfile.TemporaryDirectory(prefix='ats-one-r8-') as temp:
-                run=Path(temp);shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir();port=free_port();base=f'http://127.0.0.1:{port}'
+            with tempfile.TemporaryDirectory(prefix='ats-one-r8-',ignore_cleanup_errors=True) as temp:
+                run=Path(temp);shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copy2(ROOT/'parity_api.py',run/'parity_api.py') if (ROOT/'parity_api.py').exists() else None;shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir();port=free_port();base=f'http://127.0.0.1:{port}'
                 log=open(run/'server.log','w',encoding='utf-8');proc=subprocess.Popen([sys.executable,'server.py','--host','127.0.0.1','--port',str(port),'--reset','--quiet'],cwd=run,stdout=log,stderr=subprocess.STDOUT)
                 if not wait_ready(base):raise RuntimeError((run/'server.log').read_text(encoding='utf-8',errors='replace'))
                 local_suite(base,run/'data'/'ats_one.db',result)
@@ -214,6 +214,6 @@ def main():
             proc.terminate()
             try:proc.wait(timeout=5)
             except Exception:proc.kill()
-    document=result.document();Path(args.json_out).write_text(json.dumps(document,indent=2),encoding='utf-8');print(f"OVERALL={document['overall']} PASS={document['pass']} FAIL={document['fail']}");return 0 if document['fail']==0 else 1
+    document=result.document();out_path=Path(args.json_out);out_path.parent.mkdir(parents=True,exist_ok=True);out_path.write_text(json.dumps(document,indent=2),encoding='utf-8');print(f"OVERALL={document['overall']} PASS={document['pass']} FAIL={document['fail']}");return 0 if document['fail']==0 else 1
 
 if __name__=='__main__':raise SystemExit(main())

@@ -4,9 +4,10 @@ from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from parity_api import ensure_parity_schema, parity_get, parity_post, parity_patch, parity_delete
 
 APP_NAME = "ATS One Staffing ERP"
-APP_VERSION = "4.0.1-r13-direct-parity"
+APP_VERSION = "4.1.0-r13r7-public-parity"
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
 DATA_DIR = BASE_DIR / "data"
@@ -470,6 +471,8 @@ def migrate_db(conn):
         if table in existing:
             conn.execute(f'CREATE INDEX IF NOT EXISTS idx_{table}_tenant ON {table}(tenant_id)')
 
+
+    ensure_parity_schema(conn)
 
 def utcnow():
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -1125,6 +1128,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             u=self._need(conn)
             if not u: return
+            if parity_get(self,conn,u,path,qs): return
             if path=='/api/dashboard': return self._json(self.dashboard(conn,u))
             if path=='/api/supplier/candidates':
                 if u['role']!='supplier':return self._json({'error':'Permission denied'},403)
@@ -1745,6 +1749,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({'ok':True},200,{'Set-Cookie':'ats_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax'})
             u=self._need(conn)
             if not u:return
+            if parity_post(self,conn,u,path,data): return
             if path=='/api/search/talent':
                 if u['role'] not in ('admin','teamlead','recruiter','sales','hr'): return self._json({'error':'Permission denied'},403)
                 data=dict(data);data['_tenant_id']=u['tenant_id']
@@ -2207,6 +2212,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             u=self._need(conn)
             if not u:return
+            if parity_patch(self,conn,u,path,data): return
             m=re.fullmatch(r'/api/candidates/(\d+)',path)
             if m:
                 cid=int(m.group(1))
@@ -2389,6 +2395,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             u=self._need(conn)
             if not u:return
+            if parity_delete(self,conn,u,path,qs): return
             m=re.fullmatch(r'/api/(candidates|jobs|hotlists)/(\d+)',path)
             if m:
                 kind,row_id=m.group(1),int(m.group(2));table=kind;roles=CANDIDATE_EDIT_ROLES if kind=='candidates' else (JOB_EDIT_ROLES if kind=='jobs' else RECRUITING_ROLES)
