@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 APP_NAME = "ATS One Staffing ERP"
-APP_VERSION = "4.0.0-r13-direct-parity"
+APP_VERSION = "4.0.1-r13-direct-parity"
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
 DATA_DIR = BASE_DIR / "data"
@@ -1478,6 +1478,10 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/audit':
                 if u['role'] not in ('admin','teamlead'): return self._json({'error':'Permission denied'},403)
                 return self._json(qall(conn,'SELECT a.*,u.name user_name,u.email FROM audit_log a LEFT JOIN users u ON u.id=a.user_id WHERE a.tenant_id=? ORDER BY a.id DESC LIMIT 1000',(u['tenant_id'],)))
+            if path=='/api/reports/definitions':
+                if u['role'] not in INTERNAL_ROLES:return self._json({'error':'Permission denied'},403)
+                rows=qall(conn,'SELECT * FROM report_definitions WHERE tenant_id=? AND (owner_user_id=? OR is_shared=1) ORDER BY is_shared DESC,name',(u['tenant_id'],u['id']))
+                return self._json(rows)
             if path=='/api/reports/summary':
                 if u['role'] not in INTERNAL_ROLES:return self._json({'error':'Permission denied'},403)
                 return self._json(self.report_summary(conn,u))
