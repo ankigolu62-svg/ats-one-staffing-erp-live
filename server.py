@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 APP_NAME = "ATS One Staffing ERP"
-APP_VERSION = "3.2.0-full-ui-depth"
+APP_VERSION = "4.0.0-r13-direct-parity"
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
 DATA_DIR = BASE_DIR / "data"

@@ -1,0 +1,19 @@
+/* ATS One R13 direct-parity layer */
+.r13-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:0 0 12px}
+.r13-toolbar .field{min-width:145px;flex:1}
+.r13-toolbar .field.compact{max-width:190px}
+.r13-pager{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0}
+.r13-pager .buttons{display:flex;gap:6px}
+.r13-count{font-size:12px;color:#64748b}
+.r13-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.r13-kv{border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#fff}
+.r13-kv b{display:block;font-size:11px;color:#64748b;text-transform:uppercase;margin-bottom:4px}
+.r13-chiprow{display:flex;gap:6px;flex-wrap:wrap}
+.r13-danger{border:1px solid #fecaca;background:#fff7f7;padding:10px;border-radius:8px}
+.r13-truth{border-left:4px solid #0ea5e9;padding:10px 12px;background:#f0f9ff;margin:10px 0}
+.r13-empty{padding:22px;text-align:center;color:#64748b}
+.r13-modal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.r13-modal-grid .span2{grid-column:1/-1}
+.r13-section{font-weight:700;margin:14px 0 6px;padding-top:8px;border-top:1px solid #e5e7eb}
+.r13-link{cursor:pointer;color:#0f6fbf;text-decoration:underline}
+@media(max-width:900px){.r13-detail-grid,.r13-modal-grid{grid-template-columns:1fr}}
