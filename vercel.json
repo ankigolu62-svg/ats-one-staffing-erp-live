@@ -2,20 +2,137 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "web",
   "rewrites": [
-    {"source": "/api/:path*", "destination": "https://ats-one-snjxqdnjpayguolhafhh.onrender.com/api/:path*"}
+    {
+      "source": "/api/:path*",
+      "destination": "https://ats-one-r17-green-677fd5b.onrender.com/api/:path*"
+    }
   ],
   "headers": [
-    {"source": "/index.html", "headers": [{"key":"Cache-Control","value":"no-store, max-age=0"}]},
-    {"source": "/sw.js", "headers": [{"key":"Cache-Control","value":"no-store, max-age=0"}]},
-    {"source": "/manifest.webmanifest", "headers": [{"key":"Cache-Control","value":"no-cache, must-revalidate"}]},
-    {"source": "/app.js", "headers": [{"key":"Cache-Control","value":"no-cache, must-revalidate"}]},
-    {"source": "/r12b.js", "headers": [{"key":"Cache-Control","value":"no-cache, must-revalidate"}]},
-    {"source": "/r13.js", "headers": [{"key":"Cache-Control","value":"no-cache, must-revalidate"}]},
-    {"source": "/r13r7.js", "headers": [{"key":"Cache-Control","value":"no-cache, must-revalidate"}]},
-    {"source": "/r14.js", "headers": [{"key":"Cache-Control","value":"no-cache, must-revalidate"}]},
-    {"source": "/styles.css", "headers": [{"key":"Cache-Control","value":"no-cache, must-revalidate"}]},
-    {"source": "/r13.css", "headers": [{"key":"Cache-Control","value":"no-cache, must-revalidate"}]},
-    {"source": "/r13r7.css", "headers": [{"key":"Cache-Control","value":"no-cache, must-revalidate"}]},
-    {"source": "/r14.css", "headers": [{"key":"Cache-Control","value":"no-cache, must-revalidate"}]}
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.webmanifest",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/app.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/r12b.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/r13.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/r13r7.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/r14.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/styles.css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/r13.css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/r13r7.css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/r14.css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/r16.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/r16.css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    }
   ]
 }
