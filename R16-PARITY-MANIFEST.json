@@ -1,0 +1,38 @@
+{
+  "version": "R16_JOBDIVA_PUBLIC_PARITY_RC1",
+  "authority_base": "03fa38c059a8778abeac269dfff46936eb04bcb7",
+  "acceptance_definition": "Same publicly evidenced screen/control/button behavior/data outcome; no fake external success.",
+  "implemented_in_this_overlay": [
+    "ATS One image logo/home button",
+    "Four-group App Menu",
+    "Global multi-entity search",
+    "New Candidate four-method landing",
+    "8-tab Talent Search",
+    "Profession ADD/REMOVE + specialty panel",
+    "AND/OR/NOT skill builder",
+    "Separate results workspace",
+    "Exclude/Qualify/Expand/Hotlist/Preview/Relevancy/Bulk/Email actions",
+    "Candidate split profile with extended tabs",
+    "DivaMatch check score",
+    "Extended Job List",
+    "Company/Job Calendars",
+    "e-Interview route",
+    "Live Interview truthful gate",
+    "DivaBuzz-style communication workspace"
+  ],
+  "truthful_non_pass_without_external_access": [
+    "Inbound email resume ingestion",
+    "Binary PDF/DOCX resume parsing provider",
+    "Real-time job board resume search",
+    "LinkedIn integration",
+    "Live-video recording provider",
+    "Zoom integration",
+    "Production email/SMS/VOIP delivery",
+    "Fieldglass/Beeline live VMS",
+    "Background screening",
+    "Payroll/GL",
+    "E-Verify",
+    "Certified e-sign"
+  ],
+  "literal_100_percent_private_jobdiva_requirement": "Authorized JobDiva tenant or complete tenant recordings/screenshots are required to prove private/configuration-specific pages not exposed publicly."
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="64" viewBox="0 0 260 64" role="img" aria-label="ATS One">
+<rect width="260" height="64" rx="12" fill="#ffffff"/>
+<g transform="translate(8 10)">
+<path d="M7 42 21 2h12l14 40H36l-3-9H20l-3 9H7Zm16-19h7l-3.5-11L23 23Z" fill="#1fa889"/>
+<path d="M45 2h36v10H69v30H57V12H45V2Z" fill="#1fa889"/>
+<path d="M85 31c6 3 11 4 16 4 5 0 8-1 8-4 0-2-2-3-8-5-10-2-16-6-16-13C85 4 93 0 104 0c7 0 13 1 18 4l-5 9c-4-2-8-3-13-3-4 0-7 1-7 3s2 3 8 4c11 2 16 6 16 14 0 9-8 14-20 14-8 0-15-2-21-5l5-9Z" fill="#1fa889"/>
+<circle cx="144" cy="22" r="20" fill="#6757d9"/>
+<path d="M144 10c-7 0-12 5-12 12s5 12 12 12 12-5 12-12-5-12-12-12Zm0 8c2 0 4 2 4 4s-2 4-4 4-4-2-4-4 2-4 4-4Z" fill="#fff"/>
+<text x="171" y="34" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="700" fill="#6757d9">One</text>
+</g></svg>
