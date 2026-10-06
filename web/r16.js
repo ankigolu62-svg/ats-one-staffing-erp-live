@@ -2,6 +2,69 @@
    Loaded after R14.  This file intentionally does not fake external integrations. */
 window.R16_VERSION='R16_JOBDIVA_PUBLIC_PARITY_RC1';
 
+
+function r16MenuCapability(route){
+
+ const map={
+  talent:'talent',
+  newCandidateR16:'candidates',
+  candidates:'candidates',
+  employees:'assignments',
+  hotlists:'hotlists',
+  candidateNotes:'candidates',
+  candidateAttributes:'candidates',
+  candidateImport:'candidates',
+
+  jobs:'jobs',
+  primaryJobs:'jobs',
+  jobSearch:'jobs',
+  newJobR16:'jobs',
+  dashboard:'dashboard',
+
+  reports:'reports',
+  biShared:'reports',
+
+  calendar:'interviews',
+  companyCalendarR16:'interviews',
+  jobCalendarR16:'interviews',
+  eInterviewR16:'assessments',
+  liveInterviewR16:'interviews',
+  divaBuzzR16:'communications',
+
+  r19Ops:'r19Ops'
+ };
+
+ return map[route] || route;
+}
+
+function r16MenuAllowed(route){
+
+ if(!ME || !ME.role){
+  return false;
+ }
+
+ const allowed=new Set(
+  (NAV[ME.role]||[]).map(x=>x[0])
+ );
+
+ // R19 enterprise execution center is available only
+ // to staff roles that R19 itself supports.
+ if(route==='r19Ops'){
+  return [
+   'admin',
+   'teamlead',
+   'recruiter',
+   'sales',
+   'hr',
+   'finance'
+  ].includes(ME.role);
+ }
+
+ return allowed.has(
+  r16MenuCapability(route)
+ );
+}
+
 function r16Brand(){
   return `<img src="/ats-one-logo.svg" class="r16-brand-img" alt="ATS One">`;
 }
@@ -57,17 +120,44 @@ renderShell = function(){
 };
 
 pageMenu = function(){
-  $('#content').innerHTML=`<div class="r16-launcher">${R16_MENU.map(group=>`
-   <section class="r16-menu-card ${group[0]}">
-    <h2>${esc(group[1])}</h2>
-    <div class="r16-menu-grid">
-     ${group[2].map(([route,label])=>`
-      <button class="r16-menu-item" onclick="r16MenuGo('${route}')">
-       <span>${r10Icon(route==='newCandidateR16'?'candidates':route==='newJobR16'?'jobs':route)}</span>
-       <b>${esc(label)}</b>
-      </button>`).join('')}
-    </div>
-   </section>`).join('')}</div>`;
+
+ const groups=R16_MENU
+  .map(group=>[
+   group[0],
+   group[1],
+   group[2].filter(
+    ([route])=>r16MenuAllowed(route)
+   )
+  ])
+  .filter(group=>group[2].length);
+
+ $('#content').innerHTML=
+  `<div class="r16-launcher">
+   ${groups.map(group=>`
+    <section class="r16-menu-card ${group[0]}">
+     <h2>${esc(group[1])}</h2>
+     <div class="r16-menu-grid">
+      ${group[2].map(([route,label])=>`
+       <button
+        class="r16-menu-item"
+        data-r16-route="${esc(route)}"
+        onclick="r16MenuGo('${route}')">
+        <span>${
+         r10Icon(
+          route==='newCandidateR16'
+           ?'candidates'
+           :route==='newJobR16'
+            ?'jobs'
+            :route
+         )
+        }</span>
+        <b>${esc(label)}</b>
+       </button>`
+      ).join('')}
+     </div>
+    </section>`
+   ).join('')}
+  </div>`;
 };
 
 function r16MenuGo(route){

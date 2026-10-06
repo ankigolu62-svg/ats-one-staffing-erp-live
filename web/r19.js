@@ -1,6 +1,12 @@
 /* ATS-One R19 — real execution surfaces. */
 
 async function pageR19Operations(){
+ const role=ME?.role||'';
+
+ const canGateway=['admin','teamlead'].includes(role);
+ const canTransactions=['admin','teamlead','hr','finance'].includes(role);
+ const canAlerts=['admin','teamlead','recruiter','sales','hr'].includes(role);
+
  const [
   campaigns,
   schedules,
@@ -11,10 +17,18 @@ async function pageR19Operations(){
  ]=await Promise.all([
   api('/api/r19/campaigns'),
   api('/api/r19/report-schedules'),
-  api('/api/r19/external-gateways'),
-  api('/api/r19/external-transactions'),
-  api('/api/r19/job-alerts'),
-  api('/api/integrations')
+  canGateway
+    ? api('/api/r19/external-gateways')
+    : Promise.resolve([]),
+  canTransactions
+    ? api('/api/r19/external-transactions')
+    : Promise.resolve([]),
+  canAlerts
+    ? api('/api/r19/job-alerts')
+    : Promise.resolve([]),
+  canGateway
+    ? api('/api/integrations')
+    : Promise.resolve([])
  ]);
 
  $('#content').innerHTML=`<div class="page">
@@ -283,7 +297,7 @@ pageInterviews=async function(){
 
  const [rows,connectors]=await Promise.all([
   api('/api/interviews'),
-  api('/api/integrations')
+  api('/api/r19/meeting-connectors')
  ]);
 
  const page=document.querySelector('#content .page');
@@ -363,6 +377,32 @@ const R19_PREV_MENU=pageMenu;
 pageMenu=function(){
  R19_PREV_MENU();
 
+ // Current launcher is R16.
+ const r16Launcher=document.querySelector('.r16-launcher');
+
+ if(r16Launcher){
+
+  if(!r16Launcher.querySelector('.r19-card')){
+
+   r16Launcher.insertAdjacentHTML(
+    'beforeend',
+    `<section class="r16-menu-card blue r19-card">
+      <h2>Production Execution</h2>
+      <div class="r16-menu-grid">
+       <button class="r16-menu-item"
+        onclick="r16MenuGo('r19Ops')">
+        <span>${r10Icon('admin')}</span>
+        <b>Enterprise Execution Center</b>
+       </button>
+      </div>
+     </section>`
+   );
+  }
+
+  return;
+ }
+
+ // Legacy compatibility only.
  const launcher=document.querySelector('.launcher');
 
  if(!launcher)return;

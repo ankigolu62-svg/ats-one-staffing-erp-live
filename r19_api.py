@@ -14,6 +14,7 @@ from r18_api import (
     _tenant,
     _run_connector,
     _connector_state,
+    _json_config,
     now,
     audit,
 )
@@ -420,6 +421,43 @@ def r19_get(h,conn,u,path,qs):
         })
 
         return True
+
+    if path=="/api/r19/meeting-connectors":
+
+        if u["role"] not in INTERNAL:
+            h._json({"error":"Permission denied"},403)
+            return True
+
+        source=allrows(
+            conn,
+            """
+            SELECT *
+            FROM integration_connectors
+            WHERE tenant_id=?
+            ORDER BY category,name,id
+            """,
+            (u["tenant_id"],)
+        )
+
+        result=[]
+
+        for connector in source:
+            cfg=_json_config(connector)
+            paths=cfg.get("paths") or {}
+
+            if "create_meeting" not in paths:
+                continue
+
+            result.append({
+                "id":connector["id"],
+                "category":connector.get("category"),
+                "name":connector.get("name"),
+                "connection_state":_connector_state(connector)
+            })
+
+        h._json(result)
+        return True
+
 
     if path=="/api/r19/campaigns":
 
