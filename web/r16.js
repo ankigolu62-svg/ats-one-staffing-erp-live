@@ -457,6 +457,7 @@ const R16_PREV_ROUTE=route;
 route = async function(r){
  const base=String(r||'').split('/')[0];
  const custom={
+  jobs:pageJobs,
   companyCalendarR16:pageR16CompanyCalendar,
   jobCalendarR16:pageR16JobCalendar,
   eInterviewR16:pageR16EInterview,
