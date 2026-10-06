@@ -425,10 +425,6 @@ PROTECTED_PATCH_FIELDS={
 IMMUTABLE_RESOURCES={"candidate-privacy","job-status-history","start-events","workflow-runs","pay-statements"}
 
 CONFIGURATION_ONLY={
- "job-alerts":"Configuration only; no alert scheduler is connected.",
- "campaigns":"Configuration only; no campaign sender is connected.",
- "campaign-members":"Configuration only; no campaign sender is connected.",
- "report-schedules":"Configuration only; no report scheduler is connected.",
  "dashboards":"Layout configuration only.",
  "dashboard-widgets":"Layout configuration only.",
  "sso-configs":"Configuration only; SSO authentication is not implemented.",
@@ -505,12 +501,6 @@ def _object_scope_allowed(slug,record,u):
 def _configuration_guard(slug,payload):
  if slug=="sso-configs" and payload.get("enabled") not in (None,0,"0",False):
   return "SSO cannot be enabled until an authentication flow is connected"
- if slug in {"job-alerts","report-schedules"} and payload.get("active") not in (None,0,"0",False):
-  return f"{slug} cannot be activated because no executor is connected"
- if slug=="campaigns":
-  status=str(payload.get("status") or "Draft").strip().lower()
-  if status not in {"","draft"} or payload.get("scheduled_at") or payload.get("sent_at"):
-   return "Campaign execution is unavailable; only Draft configuration can be stored"
  return None
 
 def _decorate_configuration_only(slug,items):
