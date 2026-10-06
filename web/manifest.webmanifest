@@ -2,8 +2,13 @@
   "name":"ATS One Staffing ERP",
   "short_name":"ATS One",
   "start_url":"/",
+  "scope":"/",
   "display":"standalone",
   "background_color":"#ffffff",
-  "theme_color":"#111827",
-  "description":"Multi-user staffing, recruiting, CRM, onboarding, workforce and financial operations."
+  "theme_color":"#6757D9",
+  "description":"Multi-user staffing, recruiting, CRM, onboarding, workforce and financial operations.",
+  "icons":[
+    {"src":"/icons/ats-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"/icons/ats-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
 }

@@ -62,3 +62,11 @@ python full_live_acceptance.py --base-url https://your-service.example --live-re
 ```
 
 Real paid-vendor network calls remain explicitly `EXTERNAL`; connector configuration and internal adapter state do not pretend those calls occurred.
+
+<!-- R15_CORRECTNESS_AUTHORITY_BEGIN -->
+## R15 correctness authority
+R15 supersedes earlier capability wording where it conflicts with `R15-CORRECTNESS.md`.
+Security/lifecycle/financial mutations are policy-gated; disconnected schedulers/campaigns/SSO are configuration-only;
+external vendors remain Not Connected without live proof; production durability requires the Postgres-backed CAS authority.
+The identity model is globally unique email with one primary tenant per user row.
+<!-- R15_CORRECTNESS_AUTHORITY_END -->

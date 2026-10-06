@@ -180,3 +180,11 @@ Exclusions persist in the active criteria; Expand and Relevancy expose structure
 
 ## External services requiring real credentials
 The internal workflow and mapping exist, but live calls require customer/vendor credentials for: real job boards, LinkedIn, Fieldglass/Beeline, background screening, payroll/GL, production email/SMS/VOIP, government verification and production e-sign services.
+
+<!-- R15_CORRECTNESS_AUTHORITY_BEGIN -->
+## R15 correctness authority
+R15 supersedes earlier capability wording where it conflicts with `R15-CORRECTNESS.md`.
+Security/lifecycle/financial mutations are policy-gated; disconnected schedulers/campaigns/SSO are configuration-only;
+external vendors remain Not Connected without live proof; production durability requires the Postgres-backed CAS authority.
+The identity model is globally unique email with one primary tenant per user row.
+<!-- R15_CORRECTNESS_AUTHORITY_END -->

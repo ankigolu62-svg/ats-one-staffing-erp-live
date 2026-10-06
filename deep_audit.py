@@ -173,10 +173,10 @@ def main():
     proc=None
     with tempfile.TemporaryDirectory(prefix='ats-one-deep-audit-') as td:
         run=Path(td)/'app';run.mkdir()
-        shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copy2(ROOT/'parity_api.py',run/'parity_api.py') if (ROOT/'parity_api.py').exists() else None;shutil.copy2(ROOT/'r14_api.py',run/'r14_api.py') if (ROOT/'r14_api.py').exists() else None;shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir()
+        shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copy2(ROOT/'parity_api.py',run/'parity_api.py') if (ROOT/'parity_api.py').exists() else None;shutil.copy2(ROOT/'r14_api.py',run/'r14_api.py') if (ROOT/'r14_api.py').exists() else None;[shutil.copy2(ROOT/f,run/f) for f in ('core_policies.py','persistence_authority.py','r15_migrations.py') if (ROOT/f).exists()];shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir()
         port=free_port();base=f'http://127.0.0.1:{port}'
         logf=open(Path(td)/'server.log','w',encoding='utf-8')
-        proc=subprocess.Popen([sys.executable,'server.py','--host','127.0.0.1','--port',str(port),'--reset','--quiet'],cwd=run,stdout=logf,stderr=subprocess.STDOUT)
+        env=os.environ.copy();env['ATS_ONE_MODE']='test';env['ATS_ONE_RESET_AUTHORITY_CONFIRMED']='LOCAL_TEST_ONLY';proc=subprocess.Popen([sys.executable,'server.py','--host','127.0.0.1','--port',str(port),'--reset','--quiet'],cwd=run,env=env,stdout=logf,stderr=subprocess.STDOUT)
         try:
             if not wait_server(base):
                 book.add('RUNTIME','Server boot','FAIL','Server did not become healthy in isolated audit copy')
@@ -278,7 +278,7 @@ def main():
             book.check('HIRING WORKFLOW','Create client-visible requisition',st==201 and wjid,f'job_id={wjid}',f'status={st} body={wjob}')
             st,interest,_=recruiter.req(f'/api/jobs/{wjid}/interested','POST',{'candidate_id':2,'status':'qualified','source':'Talent Search'});book.check('HIRING WORKFLOW','Recruiter qualifies candidate into Interested layer',st==200 and interest.get('ok'),f'job={wjid} candidate=2',f'status={st}')
             st,app,_=cand.req(f'/api/jobs/{wjid}/interested','POST',{'candidate_id':1,'status':'interested','source':'Candidate Portal'});book.check('CANDIDATE PORTAL','Candidate self-apply/interest',st==200 and app.get('ok'),f'job={wjid} candidate=1',f'status={st}')
-            st,sub,_=recruiter.req(f'/api/jobs/{wjid}/submissions','POST',{'candidate_id':2,'status':'submitted','client_rate':85,'candidate_rate':50,'availability':'Immediate','recruiter_summary':'Audit qualified candidate','compliance_status':'Pending','rtr_status':'Pending'});sid=sub.get('id') if isinstance(sub,dict) else None
+            st,sub,_=recruiter.req(f'/api/jobs/{wjid}/submissions','POST',{'candidate_id':2,'status':'submitted','client_rate':85,'candidate_rate':50,'availability':'Immediate','recruiter_summary':'Audit qualified candidate','compliance_status':'Approved','rtr_status':'Approved'});sid=sub.get('id') if isinstance(sub,dict) else None
             book.check('HIRING WORKFLOW','Create submission separate from interest',st==201 and sid,f'submission_id={sid}',f'status={st} body={sub}')
             st,clsubs,_=client.req('/api/submissions');book.check('CLIENT PORTAL','Client sees submission for own company',st==200 and any(x.get('id')==sid for x in clsubs),f'visible_submissions={len(clsubs)}',f'status={st}')
             st,dec,_=client.req(f'/api/submissions/{sid}/status','POST',{'status':'interview','client_feedback':'Please schedule technical interview'});book.check('CLIENT PORTAL','Client advances submission to interview',st==200 and dec.get('ok'),f'submission={sid}',f'status={st} body={dec}')
@@ -380,10 +380,20 @@ def main():
             traceback.print_exc()
         finally:
             if proc:
-                proc.terminate()
-                try:proc.wait(timeout=4)
-                except Exception:proc.kill()
-            logf.close()
+                try:
+                    if proc.poll() is None:
+                        proc.terminate()
+                        try:proc.wait(timeout=4)
+                        except Exception:
+                            proc.kill()
+                            try:proc.wait(timeout=5)
+                            except Exception:pass
+                except Exception:
+                    pass
+            try:logf.flush()
+            except Exception:pass
+            try:logf.close()
+            except Exception:pass
 
     counts=book.counts(); total=len(book.rows)
     # Overall is deliberately strict: any runtime/security FAIL = FAIL; partials are visible but do not hide runtime pass/fail.

@@ -5,7 +5,7 @@ Local mode copies the application into a temporary directory, starts it with a
 fresh SQLite database, and mutates only that isolated copy. Live-readonly mode
 performs authenticated reads only.
 """
-import argparse, base64, hashlib, http.cookiejar, json, shutil, socket, sqlite3, subprocess, sys, tempfile, time, urllib.error, urllib.parse, urllib.request
+import argparse, base64, hashlib, http.cookiejar, json, os, shutil, socket, sqlite3, subprocess, sys, tempfile, time, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent
@@ -125,7 +125,7 @@ def local_suite(base,db_path,result):
     auto=body(admin.req('/api/automations','POST',{'name':'R8 Automation','trigger_name':'candidate.created','condition':{},'action':{'type':'create_task','title':'Automated'}}));dry=admin.req(f'/api/automations/{auto.get("id")}/run','POST',{'dry_run':True});execute=admin.req(f'/api/automations/{auto.get("id")}/run','POST',{});result.check('AUTOMATION_INTERNAL_ENGINE',body(dry).get('status')=='Dry Run' and body(execute).get('status')=='Success')
     connector=body(admin.req('/api/integrations','POST',{'category':'Internal','name':'R8 Connector','mode':'Internal','config':{'endpoint':'local'}}));test=admin.req(f'/api/integrations/{connector.get("id")}/test','POST',{});logs=admin.req(f'/api/integrations/{connector.get("id")}/logs');result.check('INTEGRATION_CONFIG',connector.get('id') and body(test).get('status')=='Success' and len(rows(logs))==1)
     udf=body(admin.req('/api/custom-fields','POST',{'entity_type':'candidate','field_name':'R8 Score','field_type':'number'}));value=admin.req('/api/custom-values','POST',{'entity_type':'candidate','entity_id':cid,'field_id':udf.get('id'),'value':'9.5'});invalid_value=admin.req('/api/custom-values','POST',{'entity_type':'candidate','entity_id':cid,'field_id':udf.get('id'),'value':'bad'});result.check('UDF_CRUD',udf.get('id') and value[0]==200 and invalid_value[0]==400)
-    user=body(admin.req('/api/users','POST',{'email':'r8.user@example.test','name':'R8 User','role':'recruiter','password':'Initial@123'}));user_patch=admin.req(f'/api/users/{user.get("id")}','PATCH',{'role':'hr','password':'Changed@123','active':0});final_admin=admin.req('/api/users/1','PATCH',{'active':0});result.check('USER_ADMIN_LIFECYCLE',user.get('id') and user_patch[0]==200 and final_admin[0]==409)
+    user=body(admin.req('/api/users','POST',{'email':'r8.user@example.test','name':'R8 User','role':'recruiter'}));public=API(base);accepted=public.req('/api/auth/invitations/accept','POST',{'token':user.get('invitation_token'),'password':'Initial@123','name':'R8 User'});user_patch=admin.req(f'/api/users/{user.get("id")}','PATCH',{'role':'hr','active':0});final_admin=admin.req('/api/users/1','PATCH',{'active':0});result.check('USER_ADMIN_LIFECYCLE',user.get('id') and accepted[0]==201 and user_patch[0]==200 and final_admin[0]==409)
     report_def=body(admin.req('/api/reports/definitions','POST',{'name':'R8 Pipeline','report_key':'recruiting_pipeline','parameters':{}}));report=admin.req('/api/reports/run?report_key=recruiting_pipeline');export=admin.req('/api/reports/export?report_key=finance_aging');result.check('REPORT_EXECUTION_EXPORT',report_def.get('id') and report[0]==200 and export[0]==200 and isinstance(export[1],bytes) and export[1].startswith(b'\xef\xbb\xbf'))
     archived=admin.req(f'/api/candidates/{cid}','DELETE');restored=admin.req(f'/api/candidates/{cid}','PATCH',{'status':'Active'});result.check('ARCHIVE_RESTORE',archived[0]==200 and restored[0]==200)
 
@@ -195,15 +195,15 @@ def readonly_suite(base,result):
     anonymous=API(base);result.check('LIVE_RBAC_READ_PROTECTION',anonymous.req('/api/candidates')[0]==401)
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--base-url');parser.add_argument('--live-readonly',action='store_true');parser.add_argument('--json-out',required=True);args=parser.parse_args();result=Results();proc=None
+    parser=argparse.ArgumentParser();parser.add_argument('--base-url');parser.add_argument('--live-readonly',action='store_true');parser.add_argument('--json-out',required=True);args=parser.parse_args();result=Results();proc=None;log=None
     try:
         if args.live_readonly:
             if not args.base_url:parser.error('--base-url is required with --live-readonly')
             readonly_suite(args.base_url,result)
         else:
             with tempfile.TemporaryDirectory(prefix='ats-one-r8-',ignore_cleanup_errors=True) as temp:
-                run=Path(temp);shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copy2(ROOT/'parity_api.py',run/'parity_api.py') if (ROOT/'parity_api.py').exists() else None;shutil.copy2(ROOT/'r14_api.py',run/'r14_api.py') if (ROOT/'r14_api.py').exists() else None;shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir();port=free_port();base=f'http://127.0.0.1:{port}'
-                log=open(run/'server.log','w',encoding='utf-8');proc=subprocess.Popen([sys.executable,'server.py','--host','127.0.0.1','--port',str(port),'--reset','--quiet'],cwd=run,stdout=log,stderr=subprocess.STDOUT)
+                run=Path(temp);shutil.copy2(ROOT/'server.py',run/'server.py');shutil.copy2(ROOT/'parity_api.py',run/'parity_api.py') if (ROOT/'parity_api.py').exists() else None;shutil.copy2(ROOT/'r14_api.py',run/'r14_api.py') if (ROOT/'r14_api.py').exists() else None;[shutil.copy2(ROOT/f,run/f) for f in ('core_policies.py','persistence_authority.py','r15_migrations.py') if (ROOT/f).exists()];shutil.copytree(ROOT/'web',run/'web');(run/'data').mkdir();port=free_port();base=f'http://127.0.0.1:{port}'
+                log=open(run/'server.log','w',encoding='utf-8');env=os.environ.copy();env['ATS_ONE_MODE']='test';env['ATS_ONE_RESET_AUTHORITY_CONFIRMED']='LOCAL_TEST_ONLY';proc=subprocess.Popen([sys.executable,'server.py','--host','127.0.0.1','--port',str(port),'--reset','--quiet'],cwd=run,env=env,stdout=log,stderr=subprocess.STDOUT)
                 if not wait_ready(base):raise RuntimeError((run/'server.log').read_text(encoding='utf-8',errors='replace'))
                 local_suite(base,run/'data'/'ats_one.db',result)
                 proc.terminate();proc.wait(timeout=5);proc=None;log.close()
@@ -211,9 +211,21 @@ def main():
         result.check('SUITE_EXECUTION',False,f'{type(exc).__name__}: {exc}')
     finally:
         if proc:
-            proc.terminate()
-            try:proc.wait(timeout=5)
-            except Exception:proc.kill()
+            try:
+                if proc.poll() is None:
+                    proc.terminate()
+                    try:proc.wait(timeout=5)
+                    except Exception:
+                        proc.kill()
+                        try:proc.wait(timeout=5)
+                        except Exception:pass
+            except Exception:
+                pass
+        if log:
+            try:log.flush()
+            except Exception:pass
+            try:log.close()
+            except Exception:pass
     document=result.document();out_path=Path(args.json_out);out_path.parent.mkdir(parents=True,exist_ok=True);out_path.write_text(json.dumps(document,indent=2),encoding='utf-8');print(f"OVERALL={document['overall']} PASS={document['pass']} FAIL={document['fail']}");return 0 if document['fail']==0 else 1
 
 if __name__=='__main__':raise SystemExit(main())

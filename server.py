@@ -1,110 +1,161 @@
 #!/usr/bin/env python3
-import argparse, base64, csv, hashlib, hmac, io, json, math, mimetypes, os, re, secrets, sqlite3, sys, threading, time, urllib.parse, urllib.request, urllib.error, webbrowser
+import argparse, atexit, base64, csv, hashlib, hmac, io, json, math, mimetypes, os, re, secrets, sqlite3, sys, threading, time, urllib.parse, urllib.request, urllib.error, webbrowser
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from parity_api import ensure_parity_schema, parity_get, parity_post, parity_patch, parity_delete
 from r14_api import ensure_r14_schema, r14_public_post, r14_get, r14_post, r14_patch, r14_delete, r14_mfa_required, r14_verify_totp
+from core_policies import PolicyError, assignment_graph, bounded_hours, entity_reference, exact_money, permission_denied_by_override, safe_identifier, tenant_parent, time_period_locked
+from r15_migrations import apply_r15_migrations, scan_integrity
+from persistence_authority import DurabilityError, LeaseConflict, PersistenceError, SchemaPolicy, SnapshotAuthority, SnapshotValidationError, SupabasePostgrestAtomicStore, WriterLease
 
 APP_NAME = "ATS One Staffing ERP"
-APP_VERSION = "5.0.0-r14-full-public-parity"
+APP_VERSION = "6.0.0-r15-master-correctness-rc"
+IDENTITY_MODEL = "global-email-primary-tenant"
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
 DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "ats_one.db"
 
-# Optional free cloud persistence using Supabase Storage.
-# The live Render instance continues using SQLite locally for compatibility,
-# while every successful write is checkpointed and backed up to a private
-# Supabase Storage object. On a fresh Render boot the DB is restored first.
+# R15 durable persistence authority.
+#
+# The historical mutable whole-file Supabase Storage backup protocol was
+# removed because it could acknowledge a local write before remote durability,
+# restore unverified bytes, and let multiple instances overwrite each other.
+# R15 uses a Postgres-backed CAS object table via Supabase/PostgREST.  A
+# production process cannot become a writer unless it owns the remote lease.
 SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
-SUPABASE_BUCKET = os.environ.get("SUPABASE_BUCKET") or "ats-one-private"
-SUPABASE_DB_OBJECT = os.environ.get("SUPABASE_DB_OBJECT") or "ats_one.db"
+SUPABASE_PERSISTENCE_TABLE = os.environ.get("SUPABASE_PERSISTENCE_TABLE") or "ats_one_atomic_objects"
 REMOTE_PERSISTENCE_ENABLED = bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
-_BACKUP_LOCK = threading.Lock()
-_BACKUP_ACTIVE = threading.local()
+APP_MODE = (os.environ.get("ATS_ONE_MODE") or "production").strip().lower()
+DEMO_MODE = APP_MODE in {"demo", "local", "test"}
+_REMOTE_STORE = None
+_REMOTE_LEASE = None
+_REMOTE_AUTHORITY = None
+_REMOTE_FAILURE = None
+_REMOTE_HEARTBEAT_STOP = threading.Event()
+_REMOTE_HEARTBEAT_THREAD = None
+_REMOTE_LOCK = threading.RLock()
+
+
+def _remote_policy():
+    return SchemaPolicy(
+        frozenset({
+            "meta", "tenants", "users", "sessions", "candidates", "jobs",
+            "submissions", "assignments", "timesheets", "expenses", "invoices",
+            "schema_migrations",
+        }),
+        min_user_version=0,
+    )
+
+
+def _remote_heartbeat():
+    global _REMOTE_FAILURE
+    while not _REMOTE_HEARTBEAT_STOP.wait(20.0):
+        try:
+            if _REMOTE_LEASE is not None:
+                _REMOTE_LEASE.renew()
+        except BaseException as exc:
+            _REMOTE_FAILURE = exc
+            print(f"PERSISTENCE_LEASE_FAILURE={exc!r}", file=sys.stderr, flush=True)
+            return
+
+
+def _init_remote_authority():
+    global _REMOTE_STORE, _REMOTE_LEASE, _REMOTE_AUTHORITY, _REMOTE_HEARTBEAT_THREAD
+    if not REMOTE_PERSISTENCE_ENABLED:
+        return None
+    with _REMOTE_LOCK:
+        if _REMOTE_AUTHORITY is not None:
+            if _REMOTE_FAILURE is not None:
+                raise DurabilityError("remote persistence authority is degraded") from _REMOTE_FAILURE
+            return _REMOTE_AUTHORITY
+        owner = (os.environ.get("RENDER_INSTANCE_ID") or os.environ.get("HOSTNAME") or secrets.token_hex(12)).strip()
+        store = SupabasePostgrestAtomicStore(
+            SUPABASE_URL,
+            SUPABASE_SERVICE_ROLE_KEY,
+            table=SUPABASE_PERSISTENCE_TABLE,
+        )
+        lease = WriterLease(store, owner_id=owner, duration_seconds=90.0)
+        lease.acquire()
+        authority = SnapshotAuthority(store, lease, retention=3)
+        _REMOTE_STORE = store
+        _REMOTE_LEASE = lease
+        _REMOTE_AUTHORITY = authority
+        _REMOTE_HEARTBEAT_STOP.clear()
+        _REMOTE_HEARTBEAT_THREAD = threading.Thread(
+            target=_remote_heartbeat,
+            name="ats-one-persistence-lease",
+            daemon=True,
+        )
+        _REMOTE_HEARTBEAT_THREAD.start()
+        return authority
+
+
+def _release_remote_authority():
+    _REMOTE_HEARTBEAT_STOP.set()
+    if _REMOTE_HEARTBEAT_THREAD is not None and _REMOTE_HEARTBEAT_THREAD.is_alive():
+        _REMOTE_HEARTBEAT_THREAD.join(2.0)
+    try:
+        if _REMOTE_LEASE is not None:
+            _REMOTE_LEASE.release()
+    except Exception:
+        pass
+
+
+atexit.register(_release_remote_authority)
+
+
+def restore_remote_db_if_needed():
+    if not REMOTE_PERSISTENCE_ENABLED or DB_PATH.exists():
+        return False
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    authority = _init_remote_authority()
+    try:
+        result = authority.restore(DB_PATH, _remote_policy())
+        print(
+            f"PERSISTENCE_RESTORE_GENERATION={result.entry.generation} "
+            f"FALLBACK={str(result.used_fallback).upper()}",
+            flush=True,
+        )
+        return True
+    except SnapshotValidationError as exc:
+        if "no remote snapshot generations exist" in str(exc):
+            return False
+        raise
+
+
+def prove_remote_durability():
+    if not REMOTE_PERSISTENCE_ENABLED:
+        return None
+    if _REMOTE_FAILURE is not None:
+        raise DurabilityError("remote persistence authority is degraded") from _REMOTE_FAILURE
+    authority = _init_remote_authority()
+    if _REMOTE_LEASE is None:
+        raise DurabilityError("writer lease is unavailable")
+    # A lease renewal immediately before publication makes a stale writer fail
+    # before any remote mutation. SnapshotAuthority re-checks it around CAS ops.
+    _REMOTE_LEASE.renew()
+    return authority.publish(DB_PATH, _remote_policy())
+
+
+class PersistentSQLiteConnection(sqlite3.Connection):
+    def commit(self):
+        super().commit()
+        if REMOTE_PERSISTENCE_ENABLED:
+            # The SQLite backup API used by SnapshotAuthority includes committed
+            # WAL pages, so correctness does not depend on a swallowed checkpoint.
+            # A request is not allowed to observe commit() success unless the CAS
+            # generation and manifest were read-back and verified.
+            prove_remote_durability()
 
 INTERNAL_ROLES = {"admin","teamlead","recruiter","sales","hr","finance"}
 CANDIDATE_EDIT_ROLES = {"admin","teamlead","recruiter","hr"}
 JOB_EDIT_ROLES = {"admin","teamlead","recruiter","sales"}
 RECRUITING_ROLES = {"admin","teamlead","recruiter","sales","hr"}
 WORKFORCE_ADMIN_ROLES = {"admin","teamlead","hr","finance"}
-
-def _supabase_headers(content_type=None, upsert=False):
-    h={
-        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
-        "apikey": SUPABASE_SERVICE_ROLE_KEY,
-    }
-    if content_type: h["Content-Type"]=content_type
-    if upsert: h["x-upsert"]="true"
-    return h
-
-def _supabase_request(method, url, data=None, headers=None, timeout=45):
-    req=urllib.request.Request(url, data=data, method=method, headers=headers or {})
-    return urllib.request.urlopen(req, timeout=timeout)
-
-def ensure_remote_bucket():
-    if not REMOTE_PERSISTENCE_ENABLED: return
-    payload=json.dumps({"id":SUPABASE_BUCKET,"name":SUPABASE_BUCKET,"public":False}).encode()
-    try:
-        with _supabase_request("POST", f"{SUPABASE_URL}/storage/v1/bucket", payload, _supabase_headers("application/json")):
-            pass
-    except urllib.error.HTTPError as e:
-        if e.code not in (400,409): raise
-
-def restore_remote_db_if_needed():
-    if not REMOTE_PERSISTENCE_ENABLED or DB_PATH.exists(): return False
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    ensure_remote_bucket()
-    url=f"{SUPABASE_URL}/storage/v1/object/authenticated/{urllib.parse.quote(SUPABASE_BUCKET)}/{urllib.parse.quote(SUPABASE_DB_OBJECT)}"
-    try:
-        with _supabase_request("GET", url, None, _supabase_headers()) as r:
-            raw=r.read()
-        if raw:
-            tmp=DB_PATH.with_suffix(".restore.tmp")
-            tmp.write_bytes(raw)
-            os.replace(tmp,DB_PATH)
-            return True
-    except urllib.error.HTTPError as e:
-        if e.code not in (400,404): raise
-    return False
-
-def backup_remote_db():
-    if not REMOTE_PERSISTENCE_ENABLED or not DB_PATH.exists(): return
-    if getattr(_BACKUP_ACTIVE,"value",False): return
-    with _BACKUP_LOCK:
-        _BACKUP_ACTIVE.value=True
-        try:
-            ensure_remote_bucket()
-            raw=DB_PATH.read_bytes()
-            url=f"{SUPABASE_URL}/storage/v1/object/{urllib.parse.quote(SUPABASE_BUCKET)}/{urllib.parse.quote(SUPABASE_DB_OBJECT)}"
-            try:
-                with _supabase_request("POST", url, raw, _supabase_headers("application/octet-stream", True)):
-                    pass
-            except urllib.error.HTTPError as e:
-                # Some Storage versions use PUT for upsert. Retry safely.
-                if e.code in (400,405,409):
-                    with _supabase_request("PUT", url, raw, _supabase_headers("application/octet-stream", True)):
-                        pass
-                else:
-                    raise
-        except Exception as e:
-            print(f"REMOTE_BACKUP_WARNING={e}", file=sys.stderr, flush=True)
-        finally:
-            _BACKUP_ACTIVE.value=False
-
-class PersistentSQLiteConnection(sqlite3.Connection):
-    def commit(self):
-        super().commit()
-        if REMOTE_PERSISTENCE_ENABLED:
-            try:
-                # Ensure main DB file contains all committed WAL pages before upload.
-                super().execute("PRAGMA wal_checkpoint(FULL)")
-            except Exception:
-                pass
-            backup_remote_db()
 
 ROLE_PERMISSIONS = {
     "admin": {"*"},
@@ -475,6 +526,7 @@ def migrate_db(conn):
 
     ensure_parity_schema(conn)
     ensure_r14_schema(conn)
+    apply_r15_migrations(conn)
 
 def utcnow():
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -511,18 +563,40 @@ def audit(conn, user_id, action, entity_type, entity_id=None, detail='', ip=''):
     conn.execute('INSERT INTO audit_log(user_id,action,entity_type,entity_id,detail,ip,created_at,tenant_id) VALUES(?,?,?,?,?,?,?,?)',
                  (user_id,action,entity_type,entity_id,detail,ip,utcnow(),(owner or {}).get('tenant_id',1)))
 
+def _secure_first_admin_bootstrap(conn):
+    """Create a disabled-password admin plus one-time invitation when explicitly configured."""
+    email=(os.environ.get('ATS_ONE_BOOTSTRAP_EMAIL') or '').strip().lower()
+    token=os.environ.get('ATS_ONE_BOOTSTRAP_TOKEN') or ''
+    if not email or len(token)<24:
+        return False
+    if qone(conn,'SELECT id FROM users WHERE lower(email)=?',(email,)):
+        return False
+    now=utcnow(); expiry=(datetime.now(timezone.utc)+timedelta(hours=1)).replace(microsecond=0).isoformat()
+    cur=conn.execute('INSERT INTO users(email,pass_hash,name,role,active,created_at,tenant_id) VALUES(?,?,?,?,1,?,1)',
+                     (email,hash_password(secrets.token_urlsafe(48)),os.environ.get('ATS_ONE_BOOTSTRAP_NAME') or 'Initial Administrator','admin',now))
+    conn.execute('INSERT INTO user_invitations(tenant_id,user_id,email,token_hash,expires_at,created_by,created_at) VALUES(1,?,?,?,?,NULL,?)',
+                 (cur.lastrowid,email,hashlib.sha256(token.encode()).hexdigest(),expiry,now))
+    conn.execute("INSERT OR REPLACE INTO meta(key,value) VALUES('bootstrap_state','invitation-created')")
+    return True
+
+
 def init_db(reset=False):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if reset and (not DEMO_MODE or os.environ.get('ATS_ONE_RESET_AUTHORITY_CONFIRMED')!='LOCAL_TEST_ONLY'):
+        raise RuntimeError("Database reset requires explicit local/test maintenance authority")
     if reset and REMOTE_PERSISTENCE_ENABLED:
-        raise RuntimeError("Remote live database reset is disabled. Use an explicit maintenance workflow.")
+        raise RuntimeError("Remote database reset is disabled")
     if reset and DB_PATH.exists(): DB_PATH.unlink()
     if not reset:
         restore_remote_db_if_needed()
     conn=db(); conn.executescript(SCHEMA); migrate_db(conn)
     seeded=qone(conn,"SELECT value FROM meta WHERE key='seeded'")
     if not seeded:
-        seed(conn)
-        conn.execute("INSERT OR REPLACE INTO meta(key,value) VALUES('seeded','1')")
+        if DEMO_MODE:
+            seed(conn)
+            conn.execute("INSERT OR REPLACE INTO meta(key,value) VALUES('seeded','demo')")
+        elif _secure_first_admin_bootstrap(conn):
+            conn.execute("INSERT OR REPLACE INTO meta(key,value) VALUES('seeded','secure-bootstrap')")
         migrate_db(conn)
     conn.execute("INSERT OR REPLACE INTO meta(key,value) VALUES('version',?)",(APP_VERSION,))
     conn.commit(); conn.close()
@@ -1079,9 +1153,18 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers(); self.wfile.write(raw)
     def _body(self):
         n=int(self.headers.get('Content-Length','0') or 0); raw=self.rfile.read(n) if n else b''
+        self._body_error=None
         if not raw: return {}
-        try: return json.loads(raw.decode())
-        except Exception: return {}
+        ctype=(self.headers.get('Content-Type') or '').split(';',1)[0].strip().lower()
+        if ctype and ctype!='application/json':
+            self._body_error='Content-Type must be application/json'; return None
+        try:
+            value=json.loads(raw.decode('utf-8'))
+        except (UnicodeDecodeError,json.JSONDecodeError):
+            self._body_error='Malformed JSON'; return None
+        if not isinstance(value,dict):
+            self._body_error='JSON request body must be an object'; return None
+        return value
     def _cookies(self):
         out={}
         for part in self.headers.get('Cookie','').split(';'):
@@ -1092,6 +1175,10 @@ class Handler(BaseHTTPRequestHandler):
         tok=self._cookies().get('ats_session') or self.headers.get('X-Session-Token')
         if not tok: return None
         return qone(conn,'''SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id AND u.tenant_id=s.tenant_id WHERE s.token=? AND s.expires_at>? AND u.active=1''',(tok,utcnow()))
+    def _permission_module(self):
+        path=urllib.parse.urlparse(self.path).path.lower()
+        mapping=[('/api/candidates','candidate'),('/api/jobs','job'),('/api/submissions','submission'),('/api/interviews','interview'),('/api/onboarding','onboarding'),('/api/assignments','assignment'),('/api/timesheets','timesheet'),('/api/expenses','expense'),('/api/invoices','invoice'),('/api/companies','crm'),('/api/contacts','crm'),('/api/leads','crm'),('/api/opportunities','crm'),('/api/reports','report'),('/api/communications','communication'),('/api/hotlists','hotlist'),('/api/vms','vms'),('/api/suppliers','supplier'),('/api/r14','r14')]
+        return next((module for prefix,module in mapping if path.startswith(prefix)),None)
     def _need(self, conn, perm=None, roles=None):
         u=self._user(conn)
         if not u: self._json({'error':'Authentication required'},401); return None
@@ -1099,6 +1186,9 @@ class Handler(BaseHTTPRequestHandler):
         if perm:
             ps=ROLE_PERMISSIONS.get(u['role'],set())
             if '*' not in ps and perm not in ps: self._json({'error':'Permission denied'},403); return None
+        module=perm or self._permission_module()
+        if module and permission_denied_by_override(conn,u['tenant_id'],u['role'],module,self.command):
+            self._json({'error':'Permission denied by tenant policy'},403); return None
         return u
     def _tenant_row(self,conn,table,row_id,u):
         return qone(conn,f'SELECT * FROM {table} WHERE id=? AND tenant_id=?',(row_id,u['tenant_id']))
@@ -1123,7 +1213,7 @@ class Handler(BaseHTTPRequestHandler):
         if not path.startswith('/api/'): return self._serve_static(path)
         conn=db()
         try:
-            if path=='/api/health': return self._json({'ok':True,'app':APP_NAME,'version':APP_VERSION,'db':str(DB_PATH),'persistence':'supabase-storage' if REMOTE_PERSISTENCE_ENABLED else 'local-sqlite'})
+            if path=='/api/health': return self._json({'ok':True,'app':APP_NAME,'version':APP_VERSION,'db':str(DB_PATH),'persistence':'supabase-postgrest-cas' if REMOTE_PERSISTENCE_ENABLED else 'local-sqlite','identity_model':IDENTITY_MODEL})
             if path=='/api/me':
                 u=self._need(conn)
                 if u: u.pop('pass_hash',None); return self._json(u)
@@ -1735,20 +1825,27 @@ class Handler(BaseHTTPRequestHandler):
                     sid=u.get('supplier_id');return self._json({'companies':[],'contacts':[],'users':[],'candidates':qall(conn,"SELECT id,first_name||' '||last_name name,current_title FROM candidates WHERE tenant_id=? AND supplier_id=? ORDER BY last_name",(u['tenant_id'],sid)),'jobs':qall(conn,"SELECT j.id,j.job_no,j.title,j.company_id,j.status FROM jobs j JOIN supplier_releases sr ON sr.job_id=j.id AND sr.tenant_id=j.tenant_id WHERE j.tenant_id=? AND sr.supplier_id=? AND sr.status='Open'",(u['tenant_id'],sid)),'suppliers':qall(conn,'SELECT id,name FROM suppliers WHERE id=? AND tenant_id=?',(sid,u['tenant_id']))})
                 return self._json({'companies':[],'contacts':[],'users':[],'candidates':[],'jobs':[],'suppliers':[]})
             return self._json({'error':'API endpoint not found'},404)
+        except (BrokenPipeError,ConnectionResetError):
+            return
+        except Exception as e:
+            incident=secrets.token_hex(8);print(f'GET_ERROR incident={incident} path={path} error={e!r}',file=sys.stderr,flush=True);return self._json({'error':'Server error','incident':incident},500)
         finally: conn.close()
     def do_POST(self):
         p=urllib.parse.urlparse(self.path); path=p.path; data=self._body(); conn=db()
         try:
+            if data is None:return self._json({'error':getattr(self,'_body_error','Malformed JSON')},400)
             if r14_public_post(self,conn,path,data): return
             if path=='/api/login':
-                email=(data.get('email') or '').strip().lower(); pw=data.get('password') or ''
+                email=(data.get('email') or '').strip().lower();pw=data.get('password') or '';ip=str(self.client_address[0] if self.client_address else '')
+                subject_hash=hashlib.sha256(email.encode()).hexdigest();ip_hash=hashlib.sha256(ip.encode()).hexdigest();attempt=qone(conn,'SELECT * FROM login_attempts WHERE subject_hash=? AND ip_hash=?',(subject_hash,ip_hash));now_dt=datetime.now(timezone.utc)
+                if attempt and attempt.get('blocked_until') and attempt['blocked_until']>now_dt.replace(microsecond=0).isoformat():return self._json({'error':'Invalid email or password'},429)
                 u=qone(conn,'SELECT * FROM users WHERE lower(email)=? AND active=1',(email,))
-                if not u or not verify_password(pw,u['pass_hash']): return self._json({'error':'Invalid email or password'},401)
-                mfa=r14_mfa_required(conn,u)
-                if mfa and not r14_verify_totp(mfa['secret'],data.get('mfa_code')): return self._json({'error':'MFA code required or invalid','mfa_required':True},401)
-                tok=secrets.token_urlsafe(32); exp=(datetime.now(timezone.utc)+timedelta(hours=18)).replace(microsecond=0).isoformat()
-                conn.execute('INSERT INTO sessions(token,user_id,expires_at,created_at,tenant_id) VALUES(?,?,?,?,?)',(tok,u['id'],exp,utcnow(),u['tenant_id'])); audit(conn,u['id'],'LOGIN','user',u['id'],'Successful login',self.client_address[0]);conn.commit();u.pop('pass_hash',None)
-                return self._json({'user':u},200,{'Set-Cookie':f'ats_session={tok}; Path=/; HttpOnly; SameSite=Lax; Max-Age=64800' + ('; Secure' if os.environ.get('RENDER') or os.environ.get('FORCE_SECURE_COOKIE')=='1' else '')})
+                password_ok=bool(u and verify_password(pw,u['pass_hash']))
+                mfa=r14_mfa_required(conn,u) if u else None;mfa_ok=not mfa or r14_verify_totp(mfa['secret'],data.get('mfa_code'))
+                if not password_ok or not mfa_ok:
+                    failures=int((attempt or {}).get('failures') or 0)+1;window=(attempt or {}).get('window_started_at') or utcnow();blocked=(now_dt+timedelta(minutes=min(30,2**max(0,failures-5)))).replace(microsecond=0).isoformat() if failures>=5 else None
+                    conn.execute('INSERT INTO login_attempts(subject_hash,ip_hash,failures,window_started_at,blocked_until,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(subject_hash,ip_hash) DO UPDATE SET failures=excluded.failures,blocked_until=excluded.blocked_until,updated_at=excluded.updated_at',(subject_hash,ip_hash,failures,window,blocked,utcnow()));conn.execute('INSERT INTO security_events(tenant_id,user_id,event_type,subject_hash,ip_hash,detail,created_at) VALUES(?,?,?,?,?,?,?)',((u or {}).get('tenant_id'),(u or {}).get('id'),'LOGIN_FAILED',subject_hash,ip_hash,'authentication failed',utcnow()));conn.commit();return self._json({'error':'Invalid email or password'},401 if not blocked else 429)
+                conn.execute('DELETE FROM login_attempts WHERE subject_hash=? AND ip_hash=?',(subject_hash,ip_hash));tok=secrets.token_urlsafe(32);exp=(now_dt+timedelta(hours=18)).replace(microsecond=0).isoformat();conn.execute('INSERT INTO sessions(token,user_id,expires_at,created_at,tenant_id) VALUES(?,?,?,?,?)',(tok,u['id'],exp,utcnow(),u['tenant_id']));audit(conn,u['id'],'LOGIN','user',u['id'],'Successful login',ip);conn.commit();u.pop('pass_hash',None);return self._json({'user':u},200,{'Set-Cookie':f'ats_session={tok}; Path=/; HttpOnly; SameSite=Lax; Max-Age=64800' + ('; Secure' if os.environ.get('RENDER') or os.environ.get('FORCE_SECURE_COOKIE')=='1' else '')})
             if path=='/api/logout':
                 tok=self._cookies().get('ats_session');
                 if tok: conn.execute('DELETE FROM sessions WHERE token=?',(tok,));conn.commit()
@@ -1891,6 +1988,12 @@ class Handler(BaseHTTPRequestHandler):
                 seq=(qone(conn,'SELECT COUNT(*) n FROM jobs')['n'] or 0)+401; job_no=data.get('job_no') or f"26-{seq:05d}"; now=utcnow()
                 cols=['job_no','title','company_id','contact_id','primary_recruiter_id','sales_user_id','status','priority','position_type','openings','filled','work_mode','city','state','country','zip','start_date','end_date','pay_min','pay_max','bill_min','bill_max','rate_type','profession','specialty','required_skills','required_qualifications','required_licenses','required_certifications','description','submission_guidelines_override','source','external_vms_id','latitude','longitude','tenant_id']
                 if data.get('company_id') and not self._tenant_row(conn,'companies',int(data['company_id']),u):return self._json({'error':'Company not found'},404)
+                if data.get('contact_id'):
+                    contact=self._tenant_row(conn,'contacts',int(data['contact_id']),u)
+                    if not contact:return self._json({'error':'Contact not found'},404)
+                    if data.get('company_id') and int(contact.get('company_id') or 0)!=int(data.get('company_id') or 0):return self._json({'error':'Contact does not belong to job company'},409)
+                try:job_no=safe_identifier(job_no,'job_no')
+                except PolicyError as e:return self._json({'error':str(e),'code':e.code},e.status)
                 for owner_field in ('primary_recruiter_id','sales_user_id'):
                     if data.get(owner_field) and not self._tenant_row(conn,'users',int(data[owner_field]),u):return self._json({'error':owner_field+' not found'},404)
                 vals=[data.get(c) for c in cols]; vals[0]=job_no; vals[4]=vals[4] or u['id']; vals[5]=vals[5] or u['id']; vals[6]=vals[6] or 'Open'; vals[7]=vals[7] or 'Normal'; vals[8]=vals[8] or 'Contract'; vals[9]=vals[9] or 1; vals[10]=vals[10] or 0; vals[11]=vals[11] or 'Onsite'; vals[14]=vals[14] or 'USA'; vals[22]=vals[22] or 'hour'; vals[31]=vals[31] or 'Direct'
@@ -1951,9 +2054,13 @@ class Handler(BaseHTTPRequestHandler):
                 conn.execute('UPDATE submissions SET status=?,client_feedback=COALESCE(?,client_feedback),compliance_status=COALESCE(?,compliance_status),rtr_status=COALESCE(?,rtr_status),updated_at=? WHERE id=? AND tenant_id=?',(st,data.get('client_feedback'),data.get('compliance_status'),data.get('rtr_status'),utcnow(),sid,u['tenant_id']));record_transition(conn,u,'submission',sid,submission['status'],st,data.get('client_feedback',''));audit(conn,u['id'],'STATUS','submission',sid,st,self.client_address[0]);conn.commit();return self._json({'ok':True})
             if path=='/api/interviews':
                 if u['role'] not in ('admin','teamlead','recruiter','sales'): return self._json({'error':'Permission denied'},403)
-                sid=int(data.get('submission_id') or 0)
-                if not self._tenant_row(conn,'submissions',sid,u):return self._json({'error':'Submission not found'},404)
-                cur=conn.execute('INSERT INTO interviews(submission_id,interview_type,scheduled_at,timezone,status,location_or_link,interviewer,feedback,rating,created_at,tenant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)',(sid,data.get('interview_type','Video'),data.get('scheduled_at'),data.get('timezone','UTC'),data.get('status','scheduled'),data.get('location_or_link',''),data.get('interviewer',''),data.get('feedback',''),data.get('rating'),utcnow(),u['tenant_id'])); conn.execute('UPDATE submissions SET status="interview",updated_at=? WHERE id=? AND tenant_id=?',(utcnow(),sid,u['tenant_id']));audit(conn,u['id'],'CREATE','interview',cur.lastrowid,f'submission={sid}',self.client_address[0]);conn.commit();return self._json({'id':cur.lastrowid,'ok':True},201)
+                sid=int(data.get('submission_id') or 0);submission=self._tenant_row(conn,'submissions',sid,u)
+                if not submission:return self._json({'error':'Submission not found'},404)
+                try:ensure_transition('submission',submission['status'],'interview')
+                except ValueError as e:return self._json({'error':str(e)},409)
+                if norm(submission.get('rtr_status')) not in ('approved','complete','signed') or norm(submission.get('compliance_status')) in ('blocked','failed','rejected'):
+                    return self._json({'error':'RTR approval and non-blocked compliance are required before interview'},409)
+                now=utcnow();cur=conn.execute('INSERT INTO interviews(submission_id,interview_type,scheduled_at,timezone,status,location_or_link,interviewer,feedback,rating,created_at,tenant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)',(sid,data.get('interview_type','Video'),data.get('scheduled_at'),data.get('timezone','UTC'),data.get('status','scheduled'),data.get('location_or_link',''),data.get('interviewer',''),data.get('feedback',''),data.get('rating'),now,u['tenant_id']));conn.execute('UPDATE submissions SET status="interview",updated_at=? WHERE id=? AND tenant_id=? AND status=?',(now,sid,u['tenant_id'],submission['status']));record_transition(conn,u,'submission',sid,submission['status'],'interview','Interview created');audit(conn,u['id'],'CREATE','interview',cur.lastrowid,f'submission={sid}',self.client_address[0]);conn.commit();return self._json({'id':cur.lastrowid,'ok':True},201)
             if path=='/api/assessments':
                 if u['role'] not in ('admin','teamlead','recruiter','hr'): return self._json({'error':'Permission denied'},403)
                 if not self._tenant_row(conn,'candidates',int(data.get('candidate_id') or 0),u):return self._json({'error':'Candidate not found'},404)
@@ -1984,17 +2091,32 @@ class Handler(BaseHTTPRequestHandler):
                 audit(conn,u['id'],'STATUS','onboarding_requirement',rid,st,self.client_address[0]);conn.commit();return self._json({'ok':True})
             if path=='/api/assignments':
                 if u['role'] not in ('admin','teamlead','hr','finance'): return self._json({'error':'Permission denied'},403)
-                if not self._tenant_row(conn,'candidates',int(data.get('candidate_id') or 0),u) or not self._tenant_row(conn,'jobs',int(data.get('job_id') or 0),u):return self._json({'error':'Candidate or job not found'},404)
-                now=utcnow();cur=conn.execute('INSERT INTO assignments(start_id,candidate_id,job_id,company_id,status,start_date,end_date,worksite,cost_center,vms_id,approver_contact_id,bill_rate,pay_rate,overtime_rule,payroll_profile,po_number,created_at,updated_at,tenant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(data.get('start_id'),data.get('candidate_id'),data.get('job_id'),data.get('company_id'),data.get('status','pending'),data.get('start_date'),data.get('end_date'),data.get('worksite'),data.get('cost_center'),data.get('vms_id'),data.get('approver_contact_id'),data.get('bill_rate'),data.get('pay_rate'),data.get('overtime_rule','1.5x after 40h'),data.get('payroll_profile','Hourly'),data.get('po_number'),now,now,u['tenant_id']));audit(conn,u['id'],'CREATE','assignment',cur.lastrowid,'',self.client_address[0]);conn.commit();return self._json({'id':cur.lastrowid,'ok':True},201)
+                try:
+                    candidate,job,company,start,approver=assignment_graph(conn,data,u['tenant_id'])
+                    bill=float(exact_money(data.get('bill_rate') or 0,'bill_rate'));pay=float(exact_money(data.get('pay_rate') or 0,'pay_rate'))
+                except PolicyError as e:return self._json({'error':str(e),'code':e.code},e.status)
+                now=utcnow();cur=conn.execute('INSERT INTO assignments(start_id,candidate_id,job_id,company_id,status,start_date,end_date,worksite,cost_center,vms_id,approver_contact_id,bill_rate,pay_rate,overtime_rule,payroll_profile,po_number,created_at,updated_at,tenant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(data.get('start_id'),candidate['id'],job['id'],company['id'],data.get('status','pending'),data.get('start_date'),data.get('end_date'),data.get('worksite'),data.get('cost_center'),data.get('vms_id'),data.get('approver_contact_id'),bill,pay,data.get('overtime_rule','1.5x after 40h'),data.get('payroll_profile','Hourly'),data.get('po_number'),now,now,u['tenant_id']));audit(conn,u['id'],'CREATE','assignment',cur.lastrowid,'',self.client_address[0]);conn.commit();return self._json({'id':cur.lastrowid,'ok':True},201)
             if path=='/api/timesheets':
                 if u['role'] not in ('admin','teamlead','finance','hr','worker'): return self._json({'error':'Permission denied'},403)
                 cid=u['candidate_id'] if u['role']=='worker' else data.get('candidate_id'); aid=int(data.get('assignment_id') or 0)
                 assignment=self._tenant_row(conn,'assignments',aid,u)
                 if not assignment:return self._json({'error':'Assignment not found'},404)
+                if int(assignment.get('candidate_id') or 0)!=int(cid or 0):return self._json({'error':'Candidate does not match assignment'},409)
                 if u['role']=='worker' and assignment.get('candidate_id')!=u.get('candidate_id'): return self._json({'error':'Permission denied'},403)
-                daily=data.get('daily') or {}; total=sum(float(v or 0) for v in daily.values()); regular=min(total,40); ot=max(0,total-40); now=utcnow();
-                if data.get('status','submitted') not in ('draft','submitted'):return self._json({'error':'New timesheets must start as draft or submitted'},409)
-                cur=conn.execute('INSERT INTO timesheets(assignment_id,candidate_id,week_start,status,total_hours,regular_hours,overtime_hours,daily_json,submitted_at,approved_by,approved_at,rejection_note,created_at,updated_at,tenant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(assignment_id,week_start) DO UPDATE SET status=excluded.status,total_hours=excluded.total_hours,regular_hours=excluded.regular_hours,overtime_hours=excluded.overtime_hours,daily_json=excluded.daily_json,submitted_at=excluded.submitted_at,updated_at=excluded.updated_at',(aid,cid,data.get('week_start'),data.get('status','submitted'),total,regular,ot,json.dumps(daily),now if data.get('status','submitted')=='submitted' else None,None,None,None,now,now,u['tenant_id'])); tid=cur.lastrowid or qone(conn,'SELECT id FROM timesheets WHERE assignment_id=? AND week_start=?',(aid,data.get('week_start')))['id'];audit(conn,u['id'],'UPSERT','timesheet',tid,f'{total} hours',self.client_address[0]);conn.commit();return self._json({'id':tid,'total_hours':total,'regular_hours':regular,'overtime_hours':ot,'ok':True},201)
+                week=data.get('week_start')
+                try:
+                    if time_period_locked(conn,u['tenant_id'],assignment,week,u['id']):return self._json({'error':'Time period is locked'},409)
+                    daily=data.get('daily') or {};clean_daily={k:bounded_hours(v,str(k)) for k,v in daily.items()};total=sum(clean_daily.values())
+                except PolicyError as e:return self._json({'error':str(e),'code':e.code},e.status)
+                regular=min(total,40);ot=max(0,total-40);now=utcnow();status=data.get('status','submitted')
+                if status not in ('draft','submitted'):return self._json({'error':'New timesheets must start as draft or submitted'},409)
+                existing=qone(conn,'SELECT * FROM timesheets WHERE assignment_id=? AND week_start=? AND tenant_id=?',(aid,week,u['tenant_id']))
+                if existing:
+                    if norm(existing.get('status')) not in ('draft','rejected','reopened'):return self._json({'error':'Existing timesheet is not editable; use an explicit reopen/status operation'},409)
+                    conn.execute('UPDATE timesheets SET candidate_id=?,status=?,total_hours=?,regular_hours=?,overtime_hours=?,daily_json=?,submitted_at=?,approved_by=NULL,approved_at=NULL,rejection_note=NULL,updated_at=? WHERE id=? AND tenant_id=?',(cid,status,total,regular,ot,json.dumps(clean_daily),now if status=='submitted' else None,now,existing['id'],u['tenant_id']));tid=existing['id'];action='UPDATE'
+                else:
+                    cur=conn.execute('INSERT INTO timesheets(assignment_id,candidate_id,week_start,status,total_hours,regular_hours,overtime_hours,daily_json,submitted_at,approved_by,approved_at,rejection_note,created_at,updated_at,tenant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(aid,cid,week,status,total,regular,ot,json.dumps(clean_daily),now if status=='submitted' else None,None,None,None,now,now,u['tenant_id']));tid=cur.lastrowid;action='CREATE'
+                audit(conn,u['id'],action,'timesheet',tid,f'{total} hours',self.client_address[0]);conn.commit();return self._json({'id':tid,'total_hours':total,'regular_hours':regular,'overtime_hours':ot,'ok':True},201 if action=='CREATE' else 200)
             m=re.fullmatch(r'/api/timesheets/(\d+)/status',path)
             if m:
                 tid=int(m.group(1)); st=data.get('status');
@@ -2007,6 +2129,10 @@ class Handler(BaseHTTPRequestHandler):
                 if st in ('approved','rejected') and u['role'] not in ('admin','finance','client','approver','teamlead'): return self._json({'error':'Permission denied'},403)
                 if st in ('reopened','invoiced') and u['role'] not in ('admin','finance','teamlead'):return self._json({'error':'Permission denied'},403)
                 if u['role']=='worker' and sheet.get('candidate_id')!=u.get('candidate_id'):return self._json({'error':'Permission denied'},403)
+                assignment=self._tenant_row(conn,'assignments',sheet['assignment_id'],u)
+                try:
+                    if assignment and time_period_locked(conn,u['tenant_id'],assignment,sheet.get('week_start'),u['id']):return self._json({'error':'Time period is locked'},409)
+                except PolicyError as e:return self._json({'error':str(e),'code':e.code},e.status)
                 try:ensure_transition('timesheet',sheet['status'],st)
                 except ValueError as e:return self._json({'error':str(e)},409)
                 conn.execute('UPDATE timesheets SET status=?,approved_by=?,approved_at=?,rejection_note=?,updated_at=? WHERE id=? AND tenant_id=?',(st,u['id'] if st=='approved' else None,utcnow() if st=='approved' else None,data.get('rejection_note'),utcnow(),tid,u['tenant_id']));record_transition(conn,u,'timesheet',tid,sheet['status'],st,data.get('rejection_note',''));audit(conn,u['id'],'STATUS','timesheet',tid,st,self.client_address[0]);conn.commit();return self._json({'ok':True})
@@ -2016,7 +2142,11 @@ class Handler(BaseHTTPRequestHandler):
                 if not assignment:return self._json({'error':'Assignment not found'},404)
                 if u['role']=='worker' and assignment.get('candidate_id')!=u.get('candidate_id'): return self._json({'error':'Permission denied'},403)
                 if data.get('status','submitted') not in ('draft','submitted'):return self._json({'error':'New expenses must start as draft or submitted'},409)
-                cid=u['candidate_id'] if u['role']=='worker' else data.get('candidate_id');cur=conn.execute('INSERT INTO expenses(assignment_id,candidate_id,expense_date,category,amount,receipt_ref,status,description,approved_by,approved_at,rejection_note,created_at,tenant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',(data.get('assignment_id'),cid,data.get('expense_date') or today(),data.get('category','Other'),float(data.get('amount') or 0),data.get('receipt_ref',''),data.get('status','submitted'),data.get('description',''),None,None,None,utcnow(),u['tenant_id']));audit(conn,u['id'],'CREATE','expense',cur.lastrowid,str(data.get('amount')),self.client_address[0]);conn.commit();return self._json({'id':cur.lastrowid,'ok':True},201)
+                cid=u['candidate_id'] if u['role']=='worker' else data.get('candidate_id')
+                if int(assignment.get('candidate_id') or 0)!=int(cid or 0):return self._json({'error':'Candidate does not match assignment'},409)
+                try:amount=float(exact_money(data.get('amount'),'amount'))
+                except PolicyError as e:return self._json({'error':str(e),'code':e.code},e.status)
+                cur=conn.execute('INSERT INTO expenses(assignment_id,candidate_id,expense_date,category,amount,receipt_ref,status,description,approved_by,approved_at,rejection_note,created_at,tenant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',(data.get('assignment_id'),cid,data.get('expense_date') or today(),data.get('category','Other'),amount,data.get('receipt_ref',''),data.get('status','submitted'),data.get('description',''),None,None,None,utcnow(),u['tenant_id']));audit(conn,u['id'],'CREATE','expense',cur.lastrowid,str(amount),self.client_address[0]);conn.commit();return self._json({'id':cur.lastrowid,'ok':True},201)
             m=re.fullmatch(r'/api/expenses/(\d+)/status',path)
             if m:
                 if u['role'] not in ('admin','teamlead','finance','client','approver'): return self._json({'error':'Permission denied'},403)
@@ -2035,7 +2165,12 @@ class Handler(BaseHTTPRequestHandler):
                 if data.get('status','draft') not in ('draft','issued'):return self._json({'error':'New invoices must start as draft or issued'},409)
                 if data.get('company_id') and not self._tenant_row(conn,'companies',int(data['company_id']),u):return self._json({'error':'Company not found'},404)
                 if data.get('assignment_id') and not self._tenant_row(conn,'assignments',int(data['assignment_id']),u):return self._json({'error':'Assignment not found'},404)
-                seq=(qone(conn,'SELECT COUNT(*) n FROM invoices WHERE tenant_id=?',(u['tenant_id'],))['n'] or 0)+902; inv=data.get('invoice_no') or (f'INV-26{seq:04d}' if u['tenant_id']==1 else f'T{u["tenant_id"]}-INV-{seq:04d}'); now=utcnow();cur=conn.execute('INSERT INTO invoices(invoice_no,company_id,assignment_id,period_start,period_end,amount,tax,status,due_date,issued_at,paid_at,created_at,paid_amount,tenant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(inv,data.get('company_id'),data.get('assignment_id'),data.get('period_start'),data.get('period_end'),float(data.get('amount') or 0),float(data.get('tax') or 0),data.get('status','draft'),data.get('due_date'),now if data.get('status')=='issued' else None,None,now,0,u['tenant_id']));audit(conn,u['id'],'CREATE','invoice',cur.lastrowid,inv,self.client_address[0]);conn.commit();return self._json({'id':cur.lastrowid,'invoice_no':inv,'ok':True},201)
+                try:amount=float(exact_money(data.get('amount'),'amount'));tax=float(exact_money(data.get('tax') or 0,'tax'))
+                except PolicyError as e:return self._json({'error':str(e),'code':e.code},e.status)
+                if data.get('assignment_id'):
+                    a=self._tenant_row(conn,'assignments',int(data['assignment_id']),u)
+                    if a and data.get('company_id') and int(a.get('company_id') or 0)!=int(data.get('company_id') or 0):return self._json({'error':'Invoice company does not match assignment company'},409)
+                seq=(qone(conn,'SELECT COUNT(*) n FROM invoices WHERE tenant_id=?',(u['tenant_id'],))['n'] or 0)+902; inv=data.get('invoice_no') or (f'INV-26{seq:04d}' if u['tenant_id']==1 else f'T{u["tenant_id"]}-INV-{seq:04d}');now=utcnow();cur=conn.execute('INSERT INTO invoices(invoice_no,company_id,assignment_id,period_start,period_end,amount,tax,status,due_date,issued_at,paid_at,created_at,paid_amount,tenant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(inv,data.get('company_id'),data.get('assignment_id'),data.get('period_start'),data.get('period_end'),amount,tax,data.get('status','draft'),data.get('due_date'),now if data.get('status')=='issued' else None,None,now,0,u['tenant_id']));audit(conn,u['id'],'CREATE','invoice',cur.lastrowid,inv,self.client_address[0]);conn.commit();return self._json({'id':cur.lastrowid,'invoice_no':inv,'ok':True},201)
             if path=='/api/communications':
                 if u['role'] not in INTERNAL_ROLES:
                     if u['role'] not in ('candidate','worker') or data.get('entity_type')!='candidate' or int(data.get('entity_id') or 0)!=int(u.get('candidate_id') or 0):return self._json({'error':'Permission denied'},403)
@@ -2044,7 +2179,12 @@ class Handler(BaseHTTPRequestHandler):
                 if u['role']!='admin': return self._json({'error':'Permission denied'},403)
                 for field,table in (('company_id','companies'),('candidate_id','candidates'),('supplier_id','suppliers')):
                     if data.get(field) and not self._tenant_row(conn,table,int(data[field]),u):return self._json({'error':field+' not found'},404)
-                email=(data.get('email') or '').strip().lower();pw=data.get('password') or 'ChangeMe@123';cur=conn.execute('INSERT INTO users(email,pass_hash,name,role,company_id,candidate_id,supplier_id,active,created_at,tenant_id) VALUES(?,?,?,?,?,?,?,1,?,?)',(email,hash_password(pw),data.get('name') or email,data.get('role','recruiter'),data.get('company_id'),data.get('candidate_id'),data.get('supplier_id'),utcnow(),u['tenant_id']));audit(conn,u['id'],'CREATE','user',cur.lastrowid,email,self.client_address[0]);conn.commit();return self._json({'id':cur.lastrowid,'ok':True},201)
+                email=(data.get('email') or '').strip().lower()
+                if not email or '@' not in email:return self._json({'error':'Valid email required'},400)
+                if data.get('password'):return self._json({'error':'Direct passwords are not accepted; use invitation setup'},400)
+                if qone(conn,'SELECT id FROM users WHERE lower(email)=?',(email,)):return self._json({'error':'Email already belongs to an ATS identity'},409)
+                token=secrets.token_urlsafe(32);temporary=secrets.token_urlsafe(48);now=utcnow();cur=conn.execute('INSERT INTO users(email,pass_hash,name,role,company_id,candidate_id,supplier_id,active,created_at,tenant_id) VALUES(?,?,?,?,?,?,?,0,?,?)',(email,hash_password(temporary),data.get('name') or email,data.get('role','recruiter'),data.get('company_id'),data.get('candidate_id'),data.get('supplier_id'),now,u['tenant_id']));uid=cur.lastrowid
+                exp=(datetime.now(timezone.utc)+timedelta(days=7)).replace(microsecond=0).isoformat();conn.execute("INSERT INTO auth_invitations_r14(email,role,token_hash,expires_at,status,invited_by,created_at,tenant_id) VALUES(?,?,?,?, 'Pending',?,?,?)",(email,data.get('role','recruiter'),hashlib.sha256(token.encode()).hexdigest(),exp,u['id'],now,u['tenant_id']));audit(conn,u['id'],'INVITE','user',uid,email,self.client_address[0]);conn.commit();return self._json({'id':uid,'ok':True,'invitation_token':token,'expires_at':exp},201)
             m=re.fullmatch(r'/api/jobs/(\d+)/clone',path)
             if m:
                 if u['role'] not in JOB_EDIT_ROLES:return self._json({'error':'Permission denied'},403)
@@ -2204,8 +2344,10 @@ class Handler(BaseHTTPRequestHandler):
                 if u['role'] not in INTERNAL_ROLES:return self._json({'error':'Permission denied'},403)
                 now=utcnow();cur=conn.execute('INSERT INTO report_definitions(name,report_key,description,parameters_json,owner_user_id,is_shared,created_at,updated_at,tenant_id) VALUES(?,?,?,?,?,?,?,?,?)',(data.get('name'),data.get('report_key'),data.get('description'),json.dumps(data.get('parameters') or {}),u['id'],1 if data.get('is_shared') else 0,now,now,u['tenant_id']));audit(conn,u['id'],'CREATE','report_definition',cur.lastrowid,data.get('name',''),self.client_address[0]);conn.commit();return self._json({'id':cur.lastrowid},201)
             if path=='/api/reset':
+                if APP_MODE not in {'demo','local','test'} or os.environ.get('ATS_ONE_RESET_AUTHORITY_CONFIRMED')!='LOCAL_TEST_ONLY':
+                    return self._json({'error':'Endpoint not available'},404)
                 if u['role']!='admin': return self._json({'error':'Permission denied'},403)
-                conn.close(); init_db(reset=True); return self._json({'ok':True,'message':'Database reset to seed data. Please login again.'})
+                conn.close(); init_db(reset=True); return self._json({'ok':True,'message':'Local/test database reset to seed data. Please login again.'})
             return self._json({'error':'API endpoint not found'},404)
         except sqlite3.IntegrityError as e:
             conn.rollback(); return self._json({'error':'Database constraint failed','detail':str(e)},409)
@@ -2217,6 +2359,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_PATCH(self):
         path=urllib.parse.urlparse(self.path).path; data=self._body(); conn=db()
         try:
+            if data is None:return self._json({'error':getattr(self,'_body_error','Malformed JSON')},400)
             u=self._need(conn)
             if not u:return
             if parity_patch(self,conn,u,path,data): return
@@ -2333,6 +2476,16 @@ class Handler(BaseHTTPRequestHandler):
                     if not own:return self._json({'error':'Permission denied'},403)
                 fields=[x for x in data if x in allowed]
                 if not fields:return self._json({'error':'No valid fields'},400)
+                if kind=='assignments':
+                    merged=dict(row);merged.update(data)
+                    try:
+                        assignment_graph(conn,merged,u['tenant_id'])
+                        for money_field in ('bill_rate','pay_rate'):
+                            if money_field in data:data[money_field]=float(exact_money(data[money_field],money_field))
+                    except PolicyError as e:return self._json({'error':str(e),'code':e.code},e.status)
+                if kind=='expenses' and 'amount' in data:
+                    try:data['amount']=float(exact_money(data['amount'],'amount'))
+                    except PolicyError as e:return self._json({'error':str(e),'code':e.code},e.status)
                 if 'status' in fields:
                     try:ensure_transition(transition,row['status'],data['status'])
                     except ValueError as e:return self._json({'error':str(e)},409)
@@ -2352,13 +2505,12 @@ class Handler(BaseHTTPRequestHandler):
                 if data.get('active') in (0,False,'0') and target['role']=='admin':
                     active=qone(conn,"SELECT COUNT(*) n FROM users WHERE tenant_id=? AND role='admin' AND active=1",(u['tenant_id'],))['n']
                     if active<=1:return self._json({'error':'Cannot disable the final active admin'},409)
+                if data.get('password'):return self._json({'error':'Direct password changes are disabled; use the reset-token flow'},400)
                 fields=[x for x in data if x in {'email','name','role','company_id','candidate_id','supplier_id','active'}]
                 values=[data[x] for x in fields]
-                if data.get('password'):
-                    fields.append('pass_hash');values.append(hash_password(data['password']))
                 if not fields:return self._json({'error':'No valid fields'},400)
                 conn.execute('UPDATE users SET '+','.join(f'{x}=?' for x in fields)+' WHERE id=? AND tenant_id=?',tuple(values)+(uid,u['tenant_id']))
-                if data.get('password') or data.get('active') in (0,False,'0') or 'role' in data:conn.execute('DELETE FROM sessions WHERE user_id=? AND tenant_id=?',(uid,u['tenant_id']))
+                if data.get('active') in (0,False,'0') or 'role' in data:conn.execute('DELETE FROM sessions WHERE user_id=? AND tenant_id=?',(uid,u['tenant_id']))
                 audit(conn,u['id'],'UPDATE','user',uid,','.join(fields),self.client_address[0]);conn.commit();return self._json({'ok':True})
             simple={
               'hotlists':('hotlists',{'name','description','owner_user_id','visibility','mode','saved_search_json','archived_at'},RECRUITING_ROLES),
@@ -2476,6 +2628,9 @@ class Handler(BaseHTTPRequestHandler):
             co=u['company_id']; data['company']=qone(conn,'SELECT * FROM companies WHERE id=?',(co,)); data['open_jobs']=qone(conn,"SELECT COUNT(*) n FROM jobs WHERE company_id=? AND status='Open'",(co,))['n']; data['submissions']=qone(conn,'SELECT COUNT(*) n FROM submissions s JOIN jobs j ON j.id=s.job_id WHERE j.company_id=?',(co,))['n']; data['interviews']=qone(conn,"SELECT COUNT(*) n FROM interviews i JOIN submissions s ON s.id=i.submission_id JOIN jobs j ON j.id=s.job_id WHERE j.company_id=? AND i.status='scheduled'",(co,))['n']; return data
         if role=='supplier':
             data['released_jobs']=qone(conn,"SELECT COUNT(*) n FROM supplier_releases WHERE supplier_id=? AND tenant_id=? AND status='Open'",(u.get('supplier_id'),u['tenant_id']))['n']; return data
+        if role=='approver':
+            co=u.get('company_id');tid=u['tenant_id']
+            data['pending_timesheets']=qone(conn,"SELECT COUNT(*) n FROM timesheets t JOIN assignments a ON a.id=t.assignment_id AND a.tenant_id=t.tenant_id WHERE t.tenant_id=? AND a.company_id=? AND t.status='submitted'",(tid,co))['n'];data['pending_expenses']=qone(conn,"SELECT COUNT(*) n FROM expenses e JOIN assignments a ON a.id=e.assignment_id AND a.tenant_id=e.tenant_id WHERE e.tenant_id=? AND a.company_id=? AND e.status='submitted'",(tid,co))['n'];return data
         tid=u['tenant_id']
         data.update({
           'open_jobs':qone(conn,"SELECT COUNT(*) n FROM jobs WHERE tenant_id=? AND status='Open'",(tid,))['n'],
@@ -2515,7 +2670,7 @@ def main():
     init_db(reset=args.reset)
     srv=ThreadingHTTPServer((args.host,args.port),Handler); srv.quiet=args.quiet
     url=f'http://127.0.0.1:{args.port}/'
-    print('='*72); print(f' {APP_NAME} {APP_VERSION}'); print('='*72); print(f'LOCAL_URL={url}'); print(f'DATABASE={DB_PATH}'); print(f'PERSISTENCE={"SUPABASE_STORAGE" if REMOTE_PERSISTENCE_ENABLED else "LOCAL_SQLITE"}'); print(f'HOST={args.host} PORT={args.port}'); print('CTRL+C to stop server'); print('='*72,flush=True)
+    print('='*72); print(f' {APP_NAME} {APP_VERSION}'); print('='*72); print(f'LOCAL_URL={url}'); print(f'DATABASE={DB_PATH}'); print(f'PERSISTENCE={"SUPABASE_POSTGREST_CAS" if REMOTE_PERSISTENCE_ENABLED else "LOCAL_SQLITE"}'); print(f'HOST={args.host} PORT={args.port}'); print('CTRL+C to stop server'); print('='*72,flush=True)
     if args.open: threading.Timer(1.1,lambda:webbrowser.open(url)).start()
     try: srv.serve_forever()
     except KeyboardInterrupt: pass

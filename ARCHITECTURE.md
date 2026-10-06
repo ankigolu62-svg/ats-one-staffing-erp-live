@@ -59,3 +59,11 @@ internal actions are persisted locally. Network calls to paid job boards,
 Fieldglass/Beeline, production messaging, payroll/GL, screening, government identity
 services and certified e-signature providers remain explicitly external until real
 credentials and contracts are supplied.
+
+<!-- R15_CORRECTNESS_AUTHORITY_BEGIN -->
+## R15 correctness authority
+R15 supersedes earlier capability wording where it conflicts with `R15-CORRECTNESS.md`.
+Security/lifecycle/financial mutations are policy-gated; disconnected schedulers/campaigns/SSO are configuration-only;
+external vendors remain Not Connected without live proof; production durability requires the Postgres-backed CAS authority.
+The identity model is globally unique email with one primary tenant per user row.
+<!-- R15_CORRECTNESS_AUTHORITY_END -->

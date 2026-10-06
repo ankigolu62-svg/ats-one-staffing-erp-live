@@ -4,6 +4,13 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent
 
+def source_app_version():
+ server=(ROOT/'server.py').read_text(encoding='utf-8-sig')
+ for line in server.splitlines():
+  line=line.strip()
+  if line.startswith('APP_VERSION') and '=' in line:return line.split('=',1)[1].strip().strip(chr(34)).strip(chr(39))
+ raise RuntimeError('APP_VERSION not found')
+
 def free_port():
  s=socket.socket();s.bind(('127.0.0.1',0));p=s.getsockname()[1];s.close();return p
 class Client:
@@ -12,7 +19,7 @@ class Client:
  def req(self,path,method='GET',body=None,expect=None):
   data=None if body is None else json.dumps(body).encode();req=urllib.request.Request(self.base+path,data=data,method=method,headers={'Content-Type':'application/json'})
   try:
-   with self.opener.open(req,timeout=20) as r:raw=r.read();status=r.status
+   with self.opener.open(req,timeout=5) as r:raw=r.read();status=r.status
   except urllib.error.HTTPError as e:status=e.code;raw=e.read()
   val=json.loads(raw.decode() or '{}') if raw else {}
   if expect is not None and status!=expect:raise AssertionError(f'{method} {path}: expected {expect}, got {status}: {val}')
@@ -26,12 +33,14 @@ def main():
   except Exception as e:results.append((name,'FAIL',str(e)))
  with tempfile.TemporaryDirectory(prefix='ats-r14-') as td:
   t=Path(td)
-  for f in ['server.py','parity_api.py','r14_api.py']:
+  for f in ['server.py','parity_api.py','r14_api.py','core_policies.py','persistence_authority.py','r15_migrations.py']:
    shutil.copy2(ROOT/f,t/f)
   shutil.copytree(ROOT/'web',t/'web')
   port=free_port();env=os.environ.copy()
   for k in ['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_BUCKET','SUPABASE_DB_OBJECT','RENDER']:env.pop(k,None)
-  p=subprocess.Popen([sys.executable,'server.py','--host','127.0.0.1','--port',str(port),'--quiet'],cwd=t,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+  env['ATS_ONE_MODE']='test'
+  env['ATS_ONE_RESET_AUTHORITY_CONFIRMED']='LOCAL_TEST_ONLY'
+  server_log=open(t/'r14-server.log','w',encoding='utf-8');p=subprocess.Popen([sys.executable,'server.py','--host','127.0.0.1','--port',str(port),'--quiet'],cwd=t,env=env,stdout=server_log,stderr=subprocess.STDOUT,text=True)
   try:
    base=f'http://127.0.0.1:{port}'
    for _ in range(100):
@@ -39,9 +48,9 @@ def main():
      with urllib.request.urlopen(base+'/api/health',timeout=1) as r:
       if r.status==200:break
     except Exception:time.sleep(.1)
-   else:raise RuntimeError('server did not start')
+   else:server_log.flush();raise RuntimeError('server did not start: '+((t/'r14-server.log').read_text(encoding='utf-8',errors='replace')[-4000:]))
    c=Client(base)
-   check('HEALTH_VERSION',lambda: (_ for _ in ()).throw(AssertionError(c.req('/api/health')[0])) if c.req('/api/health')[0].get('version')!='5.0.0-r14-full-public-parity' else None)
+   check('HEALTH_VERSION',lambda: (_ for _ in ()).throw(AssertionError(c.req('/api/health')[0])) if c.req('/api/health')[0].get('version')!=source_app_version() else None)
    check('LOGIN_ADMIN',lambda:c.req('/api/login','POST',{'email':'admin@atsone.local','password':'Admin@123'},200))
    cov=c.req('/api/r14/coverage')[0];check('COVERAGE_DOMAINS',lambda: (_ for _ in ()).throw(AssertionError(cov)) if len(cov.get('domains',[]))<18 else None)
    # IDs from seed
@@ -91,9 +100,19 @@ def main():
    c.req('/api/logout','POST',{},200);c.req('/api/login','POST',{'email':'candidate@atsone.local','password':'Candidate@123'},200)
    check('ROLE_DENY_FINANCE',lambda:c.req('/api/r14/sows',expect=403))
   finally:
-   p.terminate()
-   try:p.wait(timeout=5)
-   except Exception:p.kill()
+   try:
+    if p.poll() is None:
+     p.terminate()
+     try:p.wait(timeout=5)
+     except Exception:
+      p.kill()
+      try:p.wait(timeout=5)
+      except Exception:pass
+   finally:
+    try:server_log.flush()
+    except Exception:pass
+    try:server_log.close()
+    except Exception:pass
  doc={'overall':'PASS' if all(x[1]=='PASS' for x in results) else 'FAIL','pass':sum(x[1]=='PASS' for x in results),'fail':sum(x[1]=='FAIL' for x in results),'results':[{'name':a,'status':b,'detail':d} for a,b,d in results]}
  print(json.dumps(doc,indent=2))
  if args.json_out:
