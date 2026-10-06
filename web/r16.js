@@ -80,12 +80,19 @@ globalSearch = async function(){
   const q=$('#globalQ')?.value.trim();
   if(!q)return;
   const lower=q.toLowerCase();
-  const [candidates,jobs,companies,contacts]=await Promise.all([
-    api('/api/candidates?q='+encodeURIComponent(q)).catch(()=>[]),
-    api('/api/jobs').catch(()=>[]),
-    api('/api/companies').catch(()=>[]),
-    api('/api/contacts').catch(()=>[])
-  ]);
+  if(!internalRoles.includes(ME.role))return toast('Global Search is limited to staff accounts.','err');
+  let candidates,jobs,companies,contacts;
+  try {
+    [candidates,jobs,companies,contacts]=await Promise.all([
+      api('/api/candidates?q='+encodeURIComponent(q)),
+      api('/api/jobs'),
+      api('/api/companies'),
+      api('/api/contacts')
+    ]);
+  } catch(error) {
+    toast('Global Search could not complete: '+(error.message||String(error)),'err');
+    return;
+  }
   const hit=x=>JSON.stringify(x||{}).toLowerCase().includes(lower);
   const js=jobs.filter(hit).slice(0,40), co=companies.filter(hit).slice(0,40), ct=contacts.filter(hit).slice(0,40);
   modal('Global Search',`

@@ -1177,7 +1177,7 @@ class Handler(BaseHTTPRequestHandler):
         return qone(conn,'''SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id AND u.tenant_id=s.tenant_id WHERE s.token=? AND s.expires_at>? AND u.active=1''',(tok,utcnow()))
     def _permission_module(self):
         path=urllib.parse.urlparse(self.path).path.lower()
-        mapping=[('/api/candidates','candidate'),('/api/jobs','job'),('/api/submissions','submission'),('/api/interviews','interview'),('/api/onboarding','onboarding'),('/api/assignments','assignment'),('/api/timesheets','timesheet'),('/api/expenses','expense'),('/api/invoices','invoice'),('/api/companies','crm'),('/api/contacts','crm'),('/api/leads','crm'),('/api/opportunities','crm'),('/api/reports','report'),('/api/communications','communication'),('/api/hotlists','hotlist'),('/api/vms','vms'),('/api/suppliers','supplier'),('/api/r14','r14')]
+        mapping=[('/api/candidate-documents','document'),('/api/assessments','assessment'),('/api/candidates','candidate'),('/api/jobs','job'),('/api/submissions','submission'),('/api/interviews','interview'),('/api/onboarding','onboarding'),('/api/assignments','assignment'),('/api/timesheets','timesheet'),('/api/expenses','expense'),('/api/invoices','invoice'),('/api/companies','crm'),('/api/contacts','crm'),('/api/leads','crm'),('/api/opportunities','crm'),('/api/reports','report'),('/api/communications','communication'),('/api/hotlists','hotlist'),('/api/vms','vms'),('/api/suppliers','supplier'),('/api/r14','r14')]
         return next((module for prefix,module in mapping if path.startswith(prefix)),None)
     def _need(self, conn, perm=None, roles=None):
         u=self._user(conn)
@@ -1203,7 +1203,11 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/': path='/index.html'
         rel=urllib.parse.unquote(path.split('?',1)[0]).lstrip('/')
         fp=(WEB_DIR/rel).resolve()
-        if not str(fp).startswith(str(WEB_DIR.resolve())) or not fp.is_file():
+        try:
+            fp.relative_to(WEB_DIR.resolve())
+        except ValueError:
+            fp=WEB_DIR/'index.html'
+        if not fp.is_file():
             fp=WEB_DIR/'index.html'
         raw=fp.read_bytes(); ctype=mimetypes.guess_type(str(fp))[0] or 'application/octet-stream'
         self.send_response(200); self.send_header('Content-Type',ctype); self.send_header('Content-Length',str(len(raw)))
@@ -1245,6 +1249,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({'candidate_id':cid,'results':match_jobs_for_candidate(conn,cid,u['tenant_id'])})
             m=re.fullmatch(r'/api/candidate-documents/(\d+)/download',path)
             if m:
+                permissions=ROLE_PERMISSIONS.get(u['role'],set())
+                if '*' not in permissions and 'document' not in permissions and u['role'] not in ('candidate','worker'):
+                    return self._json({'error':'Permission denied'},403)
                 doc=self._tenant_row(conn,'candidate_documents',int(m.group(1)),u)
                 if not doc: return self._json({'error':'Not found'},404)
                 if u['role'] in ('candidate','worker') and u.get('candidate_id')!=doc['candidate_id']: return self._json({'error':'Permission denied'},403)
@@ -1297,6 +1304,8 @@ class Handler(BaseHTTPRequestHandler):
                     except Exception: h['dynamic_results']=[]
                 return self._json(h)
             if path=='/api/jobs':
+                if u['role'] not in INTERNAL_ROLES|{'client','supplier','candidate','worker'}:
+                    return self._json({'error':'Permission denied'},403)
                 sql='''SELECT j.*,co.name company_name,ct.first_name||' '||ct.last_name contact_name,u.name recruiter_name,
                  (SELECT COUNT(*) FROM submissions s WHERE s.job_id=j.id) submission_count,
                  (SELECT COUNT(*) FROM interested_candidates i WHERE i.job_id=j.id) interested_count
@@ -1305,9 +1314,18 @@ class Handler(BaseHTTPRequestHandler):
                 if u['role']=='client': sql+=' AND j.company_id=?'; params.append(u['company_id'])
                 if u['role']=='supplier': sql+=' AND j.id IN (SELECT job_id FROM supplier_releases WHERE supplier_id=? AND tenant_id=? AND status="Open")';params.extend([u.get('supplier_id'),u['tenant_id']])
                 if u['role'] in ('candidate','worker'):sql+=' AND j.status="Open"'
-                sql+=' ORDER BY CASE j.status WHEN "Open" THEN 0 ELSE 1 END,j.created_at DESC'; return self._json(qall(conn,sql,params))
+                sql+=' ORDER BY CASE j.status WHEN "Open" THEN 0 ELSE 1 END,j.created_at DESC'
+                rows=qall(conn,sql,params)
+                if u['role'] in ('candidate','worker','supplier','client'):
+                    for row in rows:
+                        private_fields=('pay_min','pay_max','external_vms_id') if u['role']=='client' else ('bill_min','bill_max','external_vms_id','submission_guidelines_override')
+                        for private_field in private_fields:
+                            row.pop(private_field,None)
+                return self._json(rows)
             m=re.fullmatch(r'/api/jobs/(\d+)',path)
             if m:
+                if u['role'] not in INTERNAL_ROLES|{'client','supplier','candidate','worker'}:
+                    return self._json({'error':'Permission denied'},403)
                 jid=int(m.group(1)); j=qone(conn,'''SELECT j.*,co.name company_name,ct.first_name||' '||ct.last_name contact_name,co.submission_guidelines company_submission_guidelines FROM jobs j LEFT JOIN companies co ON co.id=j.company_id LEFT JOIN contacts ct ON ct.id=j.contact_id WHERE j.id=? AND j.tenant_id=?''',(jid,u['tenant_id']))
                 if not j: return self._json({'error':'Not found'},404)
                 if u['role']=='client' and j.get('company_id')!=u.get('company_id'): return self._json({'error':'Permission denied'},403)
@@ -1321,6 +1339,10 @@ class Handler(BaseHTTPRequestHandler):
                 else:j['submissions']=[]
                 j['users']=qall(conn,'''SELECT ju.*,u.name,u.email FROM job_users ju JOIN users u ON u.id=ju.user_id WHERE ju.job_id=? AND ju.tenant_id=?''',(jid,u['tenant_id'])) if u['role'] in INTERNAL_ROLES else []
                 j['supplier_releases']=qall(conn,'''SELECT sr.*,s.name supplier_name FROM supplier_releases sr JOIN suppliers s ON s.id=sr.supplier_id WHERE sr.job_id=? AND sr.tenant_id=?''',(jid,u['tenant_id'])) if u['role'] in INTERNAL_ROLES else []
+                if u['role'] in ('candidate','worker','supplier','client'):
+                    private_fields=('pay_min','pay_max','external_vms_id') if u['role']=='client' else ('bill_min','bill_max','external_vms_id','submission_guidelines_override')
+                    for private_field in private_fields:
+                        j.pop(private_field,None)
                 return self._json(j)
             m=re.fullmatch(r'/api/jobs/(\d+)/(search-criteria|matches)',path)
             if m:
@@ -1457,9 +1479,13 @@ class Handler(BaseHTTPRequestHandler):
                 sql+=' ORDER BY p.created_at DESC'; return self._json(qall(conn,sql,params))
             m=re.fullmatch(r'/api/onboarding/(\d+)',path)
             if m:
+                if u['role'] not in INTERNAL_ROLES|{'candidate','worker'}:
+                    return self._json({'error':'Permission denied'},403)
                 pid=int(m.group(1)); p=qone(conn,'SELECT * FROM onboarding_packages WHERE id=? AND tenant_id=?',(pid,u['tenant_id']));
                 if not p:return self._json({'error':'Not found'},404)
-                p['requirements']=qall(conn,'SELECT * FROM onboarding_requirements WHERE package_id=? ORDER BY id',(pid,)); return self._json(p)
+                if u['role'] in ('candidate','worker') and p['candidate_id']!=u.get('candidate_id'):
+                    return self._json({'error':'Permission denied'},403)
+                p['requirements']=qall(conn,'SELECT * FROM onboarding_requirements WHERE package_id=? AND tenant_id=? ORDER BY id',(pid,u['tenant_id'])); return self._json(p)
             if path=='/api/starts':
                 if u['role'] not in INTERNAL_ROLES:return self._json({'error':'Permission denied'},403)
                 return self._json(qall(conn,'''SELECT st.*,s.job_id,s.candidate_id,c.first_name,c.last_name,j.title job_title FROM starts st JOIN submissions s ON s.id=st.submission_id JOIN candidates c ON c.id=s.candidate_id JOIN jobs j ON j.id=s.job_id WHERE st.tenant_id=? ORDER BY st.created_at DESC''',(u['tenant_id'],)))
@@ -1474,7 +1500,13 @@ class Handler(BaseHTTPRequestHandler):
                 sql='''SELECT t.*,c.first_name,c.last_name,j.title job_title,co.name company_name,a.bill_rate,a.pay_rate FROM timesheets t JOIN assignments a ON a.id=t.assignment_id JOIN candidates c ON c.id=t.candidate_id JOIN jobs j ON j.id=a.job_id LEFT JOIN companies co ON co.id=a.company_id WHERE t.tenant_id=?'''; params=[u['tenant_id']]
                 if u['role']=='worker': sql+=' AND t.candidate_id=?';params.append(u['candidate_id'])
                 if u['role'] in ('client','approver'): sql+=' AND a.company_id=?';params.append(u['company_id'])
-                sql+=' ORDER BY t.week_start DESC'; return self._json(qall(conn,sql,params))
+                sql+=' ORDER BY t.week_start DESC'
+                rows=qall(conn,sql,params)
+                if u['role'] in ('worker','client','approver'):
+                    for row in rows:
+                        if u['role']=='worker': row.pop('bill_rate',None)
+                        else: row.pop('pay_rate',None)
+                return self._json(rows)
             if path=='/api/expenses':
                 if u['role'] not in INTERNAL_ROLES|{'worker','client','approver'}:return self._json({'error':'Permission denied'},403)
                 sql='''SELECT e.*,c.first_name,c.last_name,j.title job_title,co.name company_name FROM expenses e JOIN assignments a ON a.id=e.assignment_id JOIN candidates c ON c.id=e.candidate_id JOIN jobs j ON j.id=a.job_id LEFT JOIN companies co ON co.id=a.company_id WHERE e.tenant_id=?''';params=[u['tenant_id']]
@@ -2119,7 +2151,11 @@ class Handler(BaseHTTPRequestHandler):
                 audit(conn,u['id'],action,'timesheet',tid,f'{total} hours',self.client_address[0]);conn.commit();return self._json({'id':tid,'total_hours':total,'regular_hours':regular,'overtime_hours':ot,'ok':True},201 if action=='CREATE' else 200)
             m=re.fullmatch(r'/api/timesheets/(\d+)/status',path)
             if m:
+                if u['role'] not in ('admin','teamlead','finance','hr','worker','client','approver'):
+                    return self._json({'error':'Permission denied'},403)
                 tid=int(m.group(1)); st=data.get('status');
+                if st in ('draft','submitted') and u['role'] not in ('admin','teamlead','finance','hr','worker'):
+                    return self._json({'error':'Permission denied'},403)
                 if st not in TRANSITIONS['timesheet']: return self._json({'error':'Invalid status'},400)
                 sheet=self._tenant_row(conn,'timesheets',tid,u)
                 if not sheet:return self._json({'error':'Not found'},404)
