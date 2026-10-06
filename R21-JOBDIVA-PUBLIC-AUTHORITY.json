@@ -1,0 +1,1984 @@
+{
+  "source_urls": {
+    "FAQ": "https://www.jobdiva.com/faq",
+    "ATS": "https://www.jobdiva.com/ats-software-for-staffing-agencies",
+    "HOME": "https://www.jobdiva.com/",
+    "FEATURE_INDEX": "https://login.jobdiva.com/careers.jsp",
+    "INTEGRATIONS": "https://www.jobdiva.com/recruiting-software-third-party-integrations",
+    "ENGAGEMENT": "https://www.jobdiva.com/candidate-engagement",
+    "OPERATIONS": "https://www.jobdiva.com/operational-efficiency",
+    "LOGIN": "https://login.jobdiva.com/index.jsp",
+    "ZOOM": "https://login.jobdiva.com/zoom/JobDiva-Zoom-Documentation.pdf"
+  },
+  "capabilities": [
+    {
+      "category": "Search & Sourcing",
+      "feature": "Candidate database search",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "candidates"
+        ],
+        [
+          "/api/candidates"
+        ]
+      ]
+    },
+    {
+      "category": "Search & Sourcing",
+      "feature": "Boolean candidate search",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "boolean"
+        ],
+        [
+          "candidate",
+          "talent"
+        ]
+      ]
+    },
+    {
+      "category": "Search & Sourcing",
+      "feature": "Relevant-years skill search",
+      "source": "ENGAGEMENT",
+      "external": false,
+      "groups": [
+        [
+          "candidate_skills"
+        ],
+        [
+          "years",
+          "last_used"
+        ]
+      ]
+    },
+    {
+      "category": "Search & Sourcing",
+      "feature": "Resume parsing / structured resume data",
+      "source": "OPERATIONS",
+      "external": false,
+      "groups": [
+        [
+          "resume_text"
+        ],
+        [
+          "candidate_experience",
+          "candidate_skills"
+        ]
+      ]
+    },
+    {
+      "category": "Search & Sourcing",
+      "feature": "Resume harvesting",
+      "source": "FEATURE_INDEX",
+      "external": true,
+      "groups": [
+        [
+          "harvest",
+          "resume harvest"
+        ],
+        [
+          "job board",
+          "job-board"
+        ]
+      ]
+    },
+    {
+      "category": "Search & Sourcing",
+      "feature": "External job-board sourcing",
+      "source": "FAQ",
+      "external": true,
+      "groups": [
+        [
+          "job board",
+          "job-board"
+        ],
+        [
+          "connector",
+          "gateway",
+          "distribution"
+        ]
+      ]
+    },
+    {
+      "category": "Search & Sourcing",
+      "feature": "Candidate-to-job matching",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "match_jobs_for_candidate",
+          "/matches"
+        ]
+      ]
+    },
+    {
+      "category": "Search & Sourcing",
+      "feature": "Duplicate candidate intelligence",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "duplicate_score",
+          "/duplicates"
+        ]
+      ]
+    },
+    {
+      "category": "Search & Sourcing",
+      "feature": "Candidate hotlists",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "hotlists"
+        ],
+        [
+          "hotlist_members"
+        ]
+      ]
+    },
+    {
+      "category": "Search & Sourcing",
+      "feature": "Candidate note search",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "candidate_notes"
+        ]
+      ]
+    },
+    {
+      "category": "Search & Sourcing",
+      "feature": "Candidate attribute search",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "candidate_attributes"
+        ]
+      ]
+    },
+    {
+      "category": "Search & Sourcing",
+      "feature": "Candidate import",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "candidate import",
+          "candidate_import",
+          "import candidates"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Candidate profile management",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "candidate_bundle",
+          "/api/candidates"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Candidate employment history",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "candidate_experience"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Candidate skills",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "candidate_skills"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Licenses",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "candidate_licenses"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Certifications",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "candidate_certifications"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Qualifications",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "candidate_qualifications"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Candidate notes",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "candidate_notes"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Candidate attributes",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "candidate_attributes"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Candidate documents",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "candidate_documents"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Document versioning",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "candidate_document_versions"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Custom / user-defined fields",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "custom_fields"
+        ],
+        [
+          "entity_custom_values"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Do-not-contact management",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "do_not_contact"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Email/SMS consent",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "consent_email"
+        ],
+        [
+          "consent_sms"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Candidate archival lifecycle",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "archived_at"
+        ],
+        [
+          "candidates"
+        ]
+      ]
+    },
+    {
+      "category": "Candidate Management",
+      "feature": "Candidate credibility / quality score",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "credibility_score"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Job requisition management",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "/api/jobs",
+          "jobs"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Job search",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "jobsearch",
+          "search jobs",
+          "/api/jobs"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Job ownership / primary recruiter",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "primary_recruiter_id"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Multi-user job assignment",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "job_users"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Interested-candidate workflow",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "interested_candidates"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Submission workflow",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "submissions"
+        ],
+        [
+          "client_review",
+          "submitted"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Interview workflow",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "interviews"
+        ],
+        [
+          "scheduled",
+          "no_show"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Candidate assessments",
+      "source": "INTEGRATIONS",
+      "external": false,
+      "groups": [
+        [
+          "assessments"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Offer workflow",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "'offer'",
+          "\"offer\""
+        ],
+        [
+          "submission"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Hire workflow",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "'hired'",
+          "\"hired\""
+        ],
+        [
+          "submission"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Start management",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "starts"
+        ],
+        [
+          "start_date"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Start cancellation",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "cancellation_reason"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Workflow history",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "workflow_history"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Job distribution",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "job_distribution",
+          "job distribution"
+        ]
+      ]
+    },
+    {
+      "category": "Jobs & Recruiting",
+      "feature": "Job alerts",
+      "source": "ENGAGEMENT",
+      "external": false,
+      "groups": [
+        [
+          "job_alerts",
+          "job-alerts"
+        ]
+      ]
+    },
+    {
+      "category": "CRM",
+      "feature": "Company management",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "companies"
+        ],
+        [
+          "/api/companies"
+        ]
+      ]
+    },
+    {
+      "category": "CRM",
+      "feature": "Large-company / parent-child account structure",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "parent_company_id"
+        ]
+      ]
+    },
+    {
+      "category": "CRM",
+      "feature": "Contact management",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "contacts"
+        ],
+        [
+          "/api/contacts"
+        ]
+      ]
+    },
+    {
+      "category": "CRM",
+      "feature": "Lead management",
+      "source": "HOME",
+      "external": false,
+      "groups": [
+        [
+          "leads"
+        ]
+      ]
+    },
+    {
+      "category": "CRM",
+      "feature": "Opportunity pipeline",
+      "source": "HOME",
+      "external": false,
+      "groups": [
+        [
+          "opportunities"
+        ]
+      ]
+    },
+    {
+      "category": "CRM",
+      "feature": "CRM tasks",
+      "source": "HOME",
+      "external": false,
+      "groups": [
+        [
+          "tasks"
+        ],
+        [
+          "owner_user_id"
+        ]
+      ]
+    },
+    {
+      "category": "CRM",
+      "feature": "Company pipeline dashboard",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "company_pipeline"
+        ]
+      ]
+    },
+    {
+      "category": "Workforce",
+      "feature": "Flexible / per-diem staffing",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "shift",
+          "shifts"
+        ],
+        [
+          "assignment",
+          "attendance"
+        ]
+      ]
+    },
+    {
+      "category": "Workforce",
+      "feature": "Shift management",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "shifts"
+        ]
+      ]
+    },
+    {
+      "category": "Workforce",
+      "feature": "Attendance management",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "attendance"
+        ]
+      ]
+    },
+    {
+      "category": "Workforce",
+      "feature": "Assignment management",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "assignments"
+        ]
+      ]
+    },
+    {
+      "category": "Workforce",
+      "feature": "Timesheet entry",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "timesheets"
+        ]
+      ]
+    },
+    {
+      "category": "Workforce",
+      "feature": "Timesheet approval",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "timesheets"
+        ],
+        [
+          "approved_by",
+          "approved_at"
+        ]
+      ]
+    },
+    {
+      "category": "Workforce",
+      "feature": "Expense management",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "expenses"
+        ]
+      ]
+    },
+    {
+      "category": "Workforce",
+      "feature": "Expense approval",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "expenses"
+        ],
+        [
+          "approved_by",
+          "approved_at"
+        ]
+      ]
+    },
+    {
+      "category": "Workforce",
+      "feature": "Worker portal",
+      "source": "HOME",
+      "external": false,
+      "groups": [
+        [
+          "workerportal",
+          "worker_portal"
+        ]
+      ]
+    },
+    {
+      "category": "Workforce",
+      "feature": "Approver portal",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "approverportal",
+          "approver_portal"
+        ]
+      ]
+    },
+    {
+      "category": "Onboarding & Compliance",
+      "feature": "Paperless onboarding",
+      "source": "OPERATIONS",
+      "external": false,
+      "groups": [
+        [
+          "onboarding_packages"
+        ],
+        [
+          "onboarding_requirements"
+        ]
+      ]
+    },
+    {
+      "category": "Onboarding & Compliance",
+      "feature": "Credential expiration tracking",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "expiry_date"
+        ],
+        [
+          "license",
+          "certification",
+          "document"
+        ]
+      ]
+    },
+    {
+      "category": "Onboarding & Compliance",
+      "feature": "EEO capability",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "eeo",
+          "equal employment"
+        ]
+      ]
+    },
+    {
+      "category": "Onboarding & Compliance",
+      "feature": "Background-check integration",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "background"
+        ],
+        [
+          "connector",
+          "gateway"
+        ]
+      ]
+    },
+    {
+      "category": "Onboarding & Compliance",
+      "feature": "E-Verify integration",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "e-verify",
+          "everify"
+        ]
+      ]
+    },
+    {
+      "category": "Onboarding & Compliance",
+      "feature": "Electronic signature integration",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "e-sign",
+          "esign",
+          "signature"
+        ],
+        [
+          "connector",
+          "gateway"
+        ]
+      ]
+    },
+    {
+      "category": "Onboarding & Compliance",
+      "feature": "Reference-check integration",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "reference check",
+          "reference_check"
+        ]
+      ]
+    },
+    {
+      "category": "Onboarding & Compliance",
+      "feature": "WOTC integration",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "wotc"
+        ]
+      ]
+    },
+    {
+      "category": "Onboarding & Compliance",
+      "feature": "I-9 workflow",
+      "source": "INTEGRATIONS",
+      "external": false,
+      "groups": [
+        [
+          "i-9",
+          "i9"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "VMS account management",
+      "source": "FEATURE_INDEX",
+      "external": true,
+      "groups": [
+        [
+          "vms_accounts"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "VMS mapping",
+      "source": "FEATURE_INDEX",
+      "external": true,
+      "groups": [
+        [
+          "vms_mappings"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "VMS job synchronization",
+      "source": "FAQ",
+      "external": true,
+      "groups": [
+        [
+          "vms"
+        ],
+        [
+          "job",
+          "sync"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "VMS submission synchronization",
+      "source": "ATS",
+      "external": true,
+      "groups": [
+        [
+          "vms"
+        ],
+        [
+          "submission"
+        ],
+        [
+          "sync",
+          "mapping"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "VMS timesheet synchronization",
+      "source": "ATS",
+      "external": true,
+      "groups": [
+        [
+          "vms"
+        ],
+        [
+          "timesheet"
+        ],
+        [
+          "sync",
+          "gateway"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "VMS expense synchronization",
+      "source": "ATS",
+      "external": true,
+      "groups": [
+        [
+          "vms"
+        ],
+        [
+          "expense"
+        ],
+        [
+          "sync",
+          "gateway"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "VMS SOW support",
+      "source": "ATS",
+      "external": true,
+      "groups": [
+        [
+          "sow",
+          "statement of work"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "Supplier management",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "suppliers"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "Supplier releases",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "supplier_releases"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "Supplier portal",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "supplierportal",
+          "supplier_portal"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "Job approval flow",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "approver",
+          "approval"
+        ],
+        [
+          "job",
+          "workflow"
+        ]
+      ]
+    },
+    {
+      "category": "VMS / MSP",
+      "feature": "Job catalog",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "job_catalog",
+          "job catalog"
+        ]
+      ]
+    },
+    {
+      "category": "Financials",
+      "feature": "Invoice management",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "invoices"
+        ],
+        [
+          "/api/invoices"
+        ]
+      ]
+    },
+    {
+      "category": "Financials",
+      "feature": "Invoice line items",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "invoice_lines"
+        ]
+      ]
+    },
+    {
+      "category": "Financials",
+      "feature": "Invoice issuing",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "issued_at"
+        ],
+        [
+          "invoice"
+        ]
+      ]
+    },
+    {
+      "category": "Financials",
+      "feature": "Part-payment tracking",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "part_paid"
+        ],
+        [
+          "paid_amount"
+        ]
+      ]
+    },
+    {
+      "category": "Financials",
+      "feature": "Invoice payment tracking",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "paid_at"
+        ],
+        [
+          "invoice"
+        ]
+      ]
+    },
+    {
+      "category": "Financials",
+      "feature": "Purchase orders",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "purchase_orders"
+        ],
+        [
+          "po_number"
+        ]
+      ]
+    },
+    {
+      "category": "Financials",
+      "feature": "Finance aging",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "finance_aging"
+        ]
+      ]
+    },
+    {
+      "category": "Financials",
+      "feature": "Payroll integration",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "payroll"
+        ],
+        [
+          "connector",
+          "gateway"
+        ]
+      ]
+    },
+    {
+      "category": "Financials",
+      "feature": "General-ledger integration",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "general ledger",
+          "gl connector",
+          "gl_"
+        ]
+      ]
+    },
+    {
+      "category": "Financials",
+      "feature": "SOW project financials",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "sow",
+          "statement of work"
+        ],
+        [
+          "financial",
+          "amount",
+          "billing"
+        ]
+      ]
+    },
+    {
+      "category": "Financials",
+      "feature": "Margin / CalcuDiva-style calculations",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "bill_rate"
+        ],
+        [
+          "pay_rate"
+        ],
+        [
+          "margin",
+          "calculator",
+          "calcudiva"
+        ]
+      ]
+    },
+    {
+      "category": "Reports & Analytics",
+      "feature": "Operational reporting",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "report_summary",
+          "run_report"
+        ]
+      ]
+    },
+    {
+      "category": "Reports & Analytics",
+      "feature": "Custom report definitions",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "report_definitions"
+        ]
+      ]
+    },
+    {
+      "category": "Reports & Analytics",
+      "feature": "Report builder",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "report_builders",
+          "report builder"
+        ]
+      ]
+    },
+    {
+      "category": "Reports & Analytics",
+      "feature": "Scheduled reports",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "report_schedules",
+          "report-schedules"
+        ]
+      ]
+    },
+    {
+      "category": "Reports & Analytics",
+      "feature": "Report execution history",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "report_runs",
+          "report-runs"
+        ]
+      ]
+    },
+    {
+      "category": "Reports & Analytics",
+      "feature": "CSV report generation",
+      "source": "OPERATIONS",
+      "external": false,
+      "groups": [
+        [
+          "csv.writer",
+          "text/csv"
+        ]
+      ]
+    },
+    {
+      "category": "Reports & Analytics",
+      "feature": "Role dashboards",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "dashboard"
+        ],
+        [
+          "role"
+        ]
+      ]
+    },
+    {
+      "category": "Reports & Analytics",
+      "feature": "BI dashboard surface",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "bi shared",
+          "bishared",
+          "bi"
+        ],
+        [
+          "dashboard",
+          "analytics"
+        ]
+      ]
+    },
+    {
+      "category": "Reports & Analytics",
+      "feature": "Large report catalog capability",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "report_definitions"
+        ],
+        [
+          "report",
+          "reports"
+        ]
+      ]
+    },
+    {
+      "category": "Communication",
+      "feature": "Internal communication logging",
+      "source": "ENGAGEMENT",
+      "external": false,
+      "groups": [
+        [
+          "communications"
+        ],
+        [
+          "internal"
+        ]
+      ]
+    },
+    {
+      "category": "Communication",
+      "feature": "Email provider integration",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "email"
+        ],
+        [
+          "connector",
+          "gateway"
+        ]
+      ]
+    },
+    {
+      "category": "Communication",
+      "feature": "SMS provider integration",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "sms"
+        ],
+        [
+          "connector",
+          "gateway"
+        ]
+      ]
+    },
+    {
+      "category": "Communication",
+      "feature": "Communication templates",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "template",
+          "templates"
+        ],
+        [
+          "communication",
+          "email",
+          "sms"
+        ]
+      ]
+    },
+    {
+      "category": "Communication",
+      "feature": "Campaign management",
+      "source": "ENGAGEMENT",
+      "external": false,
+      "groups": [
+        [
+          "campaigns_r14"
+        ],
+        [
+          "campaign_members"
+        ]
+      ]
+    },
+    {
+      "category": "Communication",
+      "feature": "Campaign execution",
+      "source": "ENGAGEMENT",
+      "external": false,
+      "groups": [
+        [
+          "campaign_runs_r19"
+        ]
+      ]
+    },
+    {
+      "category": "Communication",
+      "feature": "Workflow automation",
+      "source": "ENGAGEMENT",
+      "external": false,
+      "groups": [
+        [
+          "automations"
+        ],
+        [
+          "workflow",
+          "action"
+        ]
+      ]
+    },
+    {
+      "category": "Communication",
+      "feature": "Calendar functionality",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "calendar"
+        ]
+      ]
+    },
+    {
+      "category": "Communication",
+      "feature": "Outlook synchronization",
+      "source": "FEATURE_INDEX",
+      "external": true,
+      "groups": [
+        [
+          "outlook",
+          "microsoft graph",
+          "office365"
+        ]
+      ]
+    },
+    {
+      "category": "Communication",
+      "feature": "VOIP integration",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "voip",
+          "phone connector"
+        ]
+      ]
+    },
+    {
+      "category": "Communication",
+      "feature": "Video/meeting provider integration",
+      "source": "ZOOM",
+      "external": true,
+      "groups": [
+        [
+          "create_meeting",
+          "meeting"
+        ],
+        [
+          "connector",
+          "provider"
+        ]
+      ]
+    },
+    {
+      "category": "Portals",
+      "feature": "Candidate portal",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "candidateportal",
+          "candidate_portal"
+        ]
+      ]
+    },
+    {
+      "category": "Portals",
+      "feature": "Client / hiring manager portal",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "clientportal",
+          "client_portal"
+        ]
+      ]
+    },
+    {
+      "category": "Portals",
+      "feature": "Supplier portal",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "supplierportal",
+          "supplier_portal"
+        ]
+      ]
+    },
+    {
+      "category": "Portals",
+      "feature": "Worker portal",
+      "source": "HOME",
+      "external": false,
+      "groups": [
+        [
+          "workerportal",
+          "worker_portal"
+        ]
+      ]
+    },
+    {
+      "category": "Portals",
+      "feature": "Approver portal",
+      "source": "ATS",
+      "external": false,
+      "groups": [
+        [
+          "approverportal",
+          "approver_portal"
+        ]
+      ]
+    },
+    {
+      "category": "Portals",
+      "feature": "Candidate job search",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "candidateportal",
+          "candidate_portal"
+        ],
+        [
+          "jobs",
+          "search"
+        ]
+      ]
+    },
+    {
+      "category": "Portals",
+      "feature": "Candidate sign-in",
+      "source": "LOGIN",
+      "external": false,
+      "groups": [
+        [
+          "/api/login"
+        ],
+        [
+          "candidate"
+        ]
+      ]
+    },
+    {
+      "category": "Portals",
+      "feature": "Candidate resume/document upload",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "candidate_documents"
+        ],
+        [
+          "content_base64",
+          "upload"
+        ]
+      ]
+    },
+    {
+      "category": "Portals",
+      "feature": "Candidate job alerts",
+      "source": "FAQ",
+      "external": false,
+      "groups": [
+        [
+          "job_alerts",
+          "job-alerts"
+        ]
+      ]
+    },
+    {
+      "category": "Portals",
+      "feature": "Multilingual candidate experience",
+      "source": "HOME",
+      "external": false,
+      "groups": [
+        [
+          "i18n",
+          "language selector",
+          "multilingual"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "Role-based access control",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "role_permissions"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "Tenant permission overrides",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "permission_denied_by_override"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "Audit trail",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "audit_log"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "Workflow audit history",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "workflow_history"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "Custom fields configuration",
+      "source": "FEATURE_INDEX",
+      "external": false,
+      "groups": [
+        [
+          "custom_fields"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "Multi-tenant data model",
+      "source": "LOGIN",
+      "external": false,
+      "groups": [
+        [
+          "tenant_id"
+        ],
+        [
+          "tenants"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "Session management",
+      "source": "LOGIN",
+      "external": false,
+      "groups": [
+        [
+          "sessions"
+        ],
+        [
+          "expires_at"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "Password reset",
+      "source": "LOGIN",
+      "external": false,
+      "groups": [
+        [
+          "password_reset",
+          "reset_token",
+          "reset token"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "MFA / TOTP",
+      "source": "LOGIN",
+      "external": false,
+      "groups": [
+        [
+          "mfa",
+          "totp"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "SSO capability",
+      "source": "LOGIN",
+      "external": true,
+      "groups": [
+        [
+          "sso",
+          "oauth",
+          "saml"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "Login lockout / brute-force controls",
+      "source": "LOGIN",
+      "external": false,
+      "groups": [
+        [
+          "login",
+          "auth"
+        ],
+        [
+          "lock",
+          "429"
+        ]
+      ]
+    },
+    {
+      "category": "Administration",
+      "feature": "User invitations",
+      "source": "LOGIN",
+      "external": false,
+      "groups": [
+        [
+          "user_invitations"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "Integration connector registry",
+      "source": "INTEGRATIONS",
+      "external": false,
+      "groups": [
+        [
+          "integration_connectors"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "External gateway registry",
+      "source": "INTEGRATIONS",
+      "external": false,
+      "groups": [
+        [
+          "external_gateways"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "External HTTP execution",
+      "source": "INTEGRATIONS",
+      "external": false,
+      "groups": [
+        [
+          "urllib.request"
+        ],
+        [
+          "external",
+          "connector",
+          "gateway"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "External transaction audit",
+      "source": "INTEGRATIONS",
+      "external": false,
+      "groups": [
+        [
+          "external_transactions_r19"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "Background-check adapter",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "background"
+        ],
+        [
+          "gateway",
+          "connector"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "Job-board adapter",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "job-board",
+          "job board"
+        ],
+        [
+          "gateway",
+          "connector",
+          "distribution"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "Assessment-provider adapter",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "assessment"
+        ],
+        [
+          "gateway",
+          "connector"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "Resume-screening adapter",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "resume screening",
+          "screening"
+        ],
+        [
+          "gateway",
+          "connector"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "Candidate-enrichment adapter",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "enrichment"
+        ],
+        [
+          "gateway",
+          "connector"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "Payroll adapter",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "payroll"
+        ],
+        [
+          "gateway",
+          "connector"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "GL adapter",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "general ledger",
+          "gl connector",
+          "gl_"
+        ],
+        [
+          "gateway",
+          "connector"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "VMS adapter",
+      "source": "INTEGRATIONS",
+      "external": true,
+      "groups": [
+        [
+          "vms"
+        ],
+        [
+          "gateway",
+          "connector"
+        ]
+      ]
+    },
+    {
+      "category": "Integration Platform",
+      "feature": "Meeting adapter",
+      "source": "ZOOM",
+      "external": true,
+      "groups": [
+        [
+          "meeting"
+        ],
+        [
+          "gateway",
+          "connector",
+          "provider"
+        ]
+      ]
+    },
+    {
+      "category": "Mobile",
+      "feature": "Installable PWA / mobile web capability",
+      "source": "HOME",
+      "external": false,
+      "groups": [
+        [
+          "manifest.webmanifest"
+        ]
+      ]
+    },
+    {
+      "category": "Mobile",
+      "feature": "Mobile worker time/expense capability",
+      "source": "HOME",
+      "external": false,
+      "groups": [
+        [
+          "workerportal",
+          "worker_portal"
+        ],
+        [
+          "timesheets"
+        ],
+        [
+          "expenses"
+        ]
+      ]
+    },
+    {
+      "category": "Mobile",
+      "feature": "White-label application capability",
+      "source": "HOME",
+      "external": false,
+      "groups": [
+        [
+          "white-label",
+          "white label",
+          "branding"
+        ]
+      ]
+    }
+  ],
+  "scanner_rule": {
+    "tests_scanned": false,
+    "audit_docs_scanned": false,
+    "scanner_scanned_itself": false,
+    "implementation_source_only": true,
+    "signal_groups": "AND between groups / OR within each group"
+  }
+}

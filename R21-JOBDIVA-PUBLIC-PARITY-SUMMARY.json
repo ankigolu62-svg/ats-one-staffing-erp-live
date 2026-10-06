@@ -1,0 +1,19 @@
+{
+  "total_public_capabilities": 149,
+  "internal_capabilities": 117,
+  "external_capabilities": 32,
+  "internal_implementation_evidence_found": 115,
+  "internal_gap_or_unproven": 2,
+  "external_adapter_evidence_found": 28,
+  "external_adapter_missing_or_unproven": 4,
+  "internal_gap_features": [
+    "Multilingual candidate experience",
+    "White-label application capability"
+  ],
+  "external_gap_features": [
+    "Reference-check integration",
+    "WOTC integration",
+    "Outlook synchronization",
+    "Candidate-enrichment adapter"
+  ]
+}
