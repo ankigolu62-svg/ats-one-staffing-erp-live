@@ -1211,9 +1211,9 @@ class Handler(BaseHTTPRequestHandler):
         except (KeyError,TypeError,ValueError):
             return None
         return team_id
-    def _candidate_scope_allows(self,conn,u,candidate_id):
+    def _candidate_scope_allows(self,conn,u,candidate_id,module='candidate'):
         if u['role'] not in INTERNAL_ROLES:return True
-        scope=self._r23_data_scope(conn,u,'candidate')
+        scope=self._r23_data_scope(conn,u,module)
         if scope not in {'own','team'}:return True
         row=qone(conn,'SELECT owner_user_id FROM candidates WHERE id=? AND tenant_id=?',(candidate_id,u['tenant_id']))
         if not row:return None
@@ -1277,6 +1277,20 @@ class Handler(BaseHTTPRequestHandler):
             bundle=dict(bundle)
             bundle['documents']=[]
         return bundle
+    def _candidate_document_scope_allows(self,conn,u,document_id):
+        if u['role'] not in INTERNAL_ROLES:return True
+        doc=qone(
+            conn,
+            'SELECT candidate_id FROM candidate_documents WHERE id=? AND tenant_id=?',
+            (document_id,u['tenant_id'])
+        )
+        if not doc:return None
+        return self._candidate_scope_allows(
+            conn,
+            u,
+            int(doc['candidate_id']),
+            module='document'
+        )
     def _need(self, conn, perm=None, roles=None):
         u=self._user(conn)
         if not u: self._json({'error':'Authentication required'},401); return None
@@ -1349,6 +1363,76 @@ class Handler(BaseHTTPRequestHandler):
                 403
             )
             return None
+
+        if (
+            self.command in {'POST','PUT','PATCH','DELETE'}
+            and u['role'] in INTERNAL_ROLES
+        ):
+            candidate_match=re.match(
+                r'^/api/candidates/(\d+)(?:/|$)',
+                request_path
+            )
+
+            if candidate_match:
+                scoped_candidate_id=int(
+                    candidate_match.group(1)
+                )
+
+                scoped_candidate_allowed=self._candidate_scope_allows(
+                    conn,
+                    u,
+                    scoped_candidate_id
+                )
+
+                if scoped_candidate_allowed is None:
+                    self._json(
+                        {'error':'Not found'},
+                        404
+                    )
+                    return None
+
+                if scoped_candidate_allowed is False:
+                    self._json(
+                        {
+                            'error':
+                            'Candidate access denied by active profile data scope'
+                        },
+                        403
+                    )
+                    return None
+
+            document_match=re.fullmatch(
+                r'/api/candidate-documents/(\d+)',
+                request_path
+            )
+
+            if document_match:
+                scoped_document_id=int(
+                    document_match.group(1)
+                )
+
+                scoped_document_allowed=self._candidate_document_scope_allows(
+                    conn,
+                    u,
+                    scoped_document_id
+                )
+
+                if scoped_document_allowed is None:
+                    self._json(
+                        {'error':'Not found'},
+                        404
+                    )
+                    return None
+
+                if scoped_document_allowed is False:
+                    self._json(
+                        {
+                            'error':
+                            'Document access denied by active profile data scope'
+                        },
+                        403
+                    )
+                    return None
 
         return u
     def _tenant_row(self,conn,table,row_id,u):
@@ -2170,6 +2254,32 @@ class Handler(BaseHTTPRequestHandler):
                 if u['role'] not in RECRUITING_ROLES:return self._json({'error':'Permission denied'},403)
                 ids=sorted({int(x) for x in (data.get('candidate_ids') or [])});action=norm(data.get('action'))
                 valid={r['id'] for r in qall(conn,'SELECT id FROM candidates WHERE tenant_id=? AND id IN ('+(','.join('?'*len(ids)) if ids else 'NULL')+')',(u['tenant_id'],*ids))}
+                scope_state={
+                    cid:self._candidate_scope_allows(
+                        conn,
+                        u,
+                        cid
+                    )
+                    for cid in valid
+                }
+                scope_blocked={
+                    cid
+                    for cid,state in scope_state.items()
+                    if state is False
+                }
+                if scope_blocked:
+                    return self._json(
+                        {
+                            'error':
+                            'Candidate selection denied by active profile data scope'
+                        },
+                        403
+                    )
+                valid={
+                    cid
+                    for cid,state in scope_state.items()
+                    if state is True
+                }
                 if not valid:return self._json({'error':'No tenant-owned candidates selected'},400)
                 affected=0
                 if action=='hotlist':
