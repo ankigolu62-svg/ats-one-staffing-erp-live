@@ -1200,14 +1200,44 @@ class Handler(BaseHTTPRequestHandler):
         if not permission:return None
         scope=str(permission.get('data_scope') or 'all').strip().lower()
         return scope if scope in {'own','team','all'} else 'all'
+    def _candidate_scope_team_id(self,conn,u):
+        token=self._cookies().get('ats_session') or self.headers.get('X-Session-Token')
+        ctx=effective_context(conn,u,token)
+        selected=ctx.get('selected')
+        if not selected:return None
+        try:
+            team_id=int(selected['team_id'])
+            if team_id<=0:return None
+        except (KeyError,TypeError,ValueError):
+            return None
+        return team_id
     def _candidate_scope_allows(self,conn,u,candidate_id):
         if u['role'] not in INTERNAL_ROLES:return True
         scope=self._r23_data_scope(conn,u,'candidate')
-        if scope!='own':return True
+        if scope not in {'own','team'}:return True
         row=qone(conn,'SELECT owner_user_id FROM candidates WHERE id=? AND tenant_id=?',(candidate_id,u['tenant_id']))
         if not row:return None
-        try:return int(row.get('owner_user_id'))==int(u['id'])
-        except (TypeError,ValueError):return False
+        try:
+            owner_id=int(row.get('owner_user_id'))
+        except (TypeError,ValueError):
+            return False
+        if scope=='own':
+            return owner_id==int(u['id'])
+        team_id=self._candidate_scope_team_id(conn,u)
+        if team_id is None:return False
+        member=qone(conn,'''SELECT 1 ok
+            FROM team_members_r23 tm
+            JOIN teams_r23 t ON t.id=tm.team_id
+                AND t.tenant_id=?
+            JOIN users owner ON owner.id=tm.user_id
+                AND owner.tenant_id=?
+                AND owner.active=1
+            WHERE tm.team_id=?
+              AND tm.user_id=?
+              AND tm.active=1
+              AND t.active=1
+            LIMIT 1''',(u['tenant_id'],u['tenant_id'],team_id,owner_id))
+        return bool(member)
     def _need(self, conn, perm=None, roles=None):
         u=self._user(conn)
         if not u: self._json({'error':'Authentication required'},401); return None
@@ -1282,6 +1312,23 @@ class Handler(BaseHTTPRequestHandler):
                 candidate_scope=self._r23_data_scope(conn,u,'candidate')
                 if candidate_scope=='own':
                     sql+=" AND owner_user_id=?";params.append(u['id'])
+                elif candidate_scope=='team':
+                    team_id=self._candidate_scope_team_id(conn,u)
+                    if team_id is None:
+                        return self._json({'error':'Permission denied'},403)
+                    sql+=''' AND EXISTS (
+                        SELECT 1 FROM team_members_r23 tm
+                        JOIN teams_r23 t ON t.id=tm.team_id
+                            AND t.tenant_id=candidates.tenant_id
+                        JOIN users owner ON owner.id=tm.user_id
+                            AND owner.tenant_id=candidates.tenant_id
+                            AND owner.active=1
+                        WHERE tm.team_id=?
+                          AND tm.user_id=candidates.owner_user_id
+                          AND tm.active=1
+                          AND t.active=1
+                    )'''
+                    params.append(team_id)
                 if (qs.get('include_archived') or ['0'])[0]!='1': sql+=" AND lower(status)!='archived'"
                 if term: sql+=" AND (first_name||' '||last_name LIKE ? OR email LIKE ? OR phone LIKE ? OR current_title LIKE ? OR profession LIKE ?)"; params += ['%'+term+'%']*5
                 sql+=' ORDER BY updated_at DESC LIMIT 500'; return self._json(qall(conn,sql,params))
