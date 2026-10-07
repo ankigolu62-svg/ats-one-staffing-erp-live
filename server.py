@@ -11,7 +11,7 @@ from r15_migrations import apply_r15_migrations, scan_integrity
 from r18_api import ensure_r18_schema, r18_get, r18_post, r18_patch, r18_delete
 from r19_api import ensure_r19_schema, r19_get, r19_post
 from r22_api import ensure_r22_schema, r22_public_get, r22_get, r22_post
-from r23_rbac import ensure_r23_schema, r23_get, r23_post, r23_permission_denied
+from r23_rbac import ensure_r23_schema, r23_get, r23_post, r23_permission_denied, effective_context
 from r23c_candidate import ensure_r23c_schema, r23c_public_get, r23c_public_post, r23c_get, r23c_post
 from r23d_ops import ensure_r23d_schema, r23d_get, r23d_post
 from persistence_authority import DurabilityError, LeaseConflict, PersistenceError, SchemaPolicy, SnapshotAuthority, SnapshotValidationError, SupabasePostgrestAtomicStore, WriterLease
@@ -1191,6 +1191,23 @@ class Handler(BaseHTTPRequestHandler):
         path=urllib.parse.urlparse(self.path).path.lower()
         mapping=[('/api/candidate-documents','document'),('/api/assessments','assessment'),('/api/candidates','candidate'),('/api/jobs','job'),('/api/submissions','submission'),('/api/interviews','interview'),('/api/onboarding','onboarding'),('/api/assignments','assignment'),('/api/timesheets','timesheet'),('/api/expenses','expense'),('/api/invoices','invoice'),('/api/companies','crm'),('/api/contacts','crm'),('/api/leads','crm'),('/api/opportunities','crm'),('/api/reports','report'),('/api/communications','communication'),('/api/hotlists','hotlist'),('/api/vms','vms'),('/api/suppliers','supplier'),('/api/r14','r14')]
         return next((module for prefix,module in mapping if path.startswith(prefix)),None)
+    def _r23_data_scope(self,conn,u,module):
+        token=self._cookies().get('ats_session') or self.headers.get('X-Session-Token')
+        ctx=effective_context(conn,u,token)
+        selected=ctx.get('selected')
+        if not selected:return 'all'
+        permission=next((x for x in ctx.get('permissions') or [] if x.get('module')==module),None)
+        if not permission:return None
+        scope=str(permission.get('data_scope') or 'all').strip().lower()
+        return scope if scope in {'own','team','all'} else 'all'
+    def _candidate_scope_allows(self,conn,u,candidate_id):
+        if u['role'] not in INTERNAL_ROLES:return True
+        scope=self._r23_data_scope(conn,u,'candidate')
+        if scope!='own':return True
+        row=qone(conn,'SELECT owner_user_id FROM candidates WHERE id=? AND tenant_id=?',(candidate_id,u['tenant_id']))
+        if not row:return None
+        try:return int(row.get('owner_user_id'))==int(u['id'])
+        except (TypeError,ValueError):return False
     def _need(self, conn, perm=None, roles=None):
         u=self._user(conn)
         if not u: self._json({'error':'Authentication required'},401); return None
@@ -1262,6 +1279,9 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/candidates':
                 if u['role'] not in INTERNAL_ROLES: return self._json({'error':'Permission denied'},403)
                 term=(qs.get('q') or [''])[0].strip(); sql="SELECT * FROM candidates WHERE tenant_id=?"; params=[u['tenant_id']]
+                candidate_scope=self._r23_data_scope(conn,u,'candidate')
+                if candidate_scope=='own':
+                    sql+=" AND owner_user_id=?";params.append(u['id'])
                 if (qs.get('include_archived') or ['0'])[0]!='1': sql+=" AND lower(status)!='archived'"
                 if term: sql+=" AND (first_name||' '||last_name LIKE ? OR email LIKE ? OR phone LIKE ? OR current_title LIKE ? OR profession LIKE ?)"; params += ['%'+term+'%']*5
                 sql+=' ORDER BY updated_at DESC LIMIT 500'; return self._json(qall(conn,sql,params))
@@ -1270,11 +1290,17 @@ class Handler(BaseHTTPRequestHandler):
                 cid=int(m.group(1));
                 if u['role'] not in INTERNAL_ROLES|{'candidate','worker'}:return self._json({'error':'Permission denied'},403)
                 if u['role'] in ('candidate','worker') and u.get('candidate_id')!=cid: return self._json({'error':'Permission denied'},403)
+                scope_allowed=self._candidate_scope_allows(conn,u,cid)
+                if scope_allowed is None:return self._json({'error':'Not found'},404)
+                if scope_allowed is False:return self._json({'error':'Permission denied'},403)
                 b=candidate_bundle(conn,cid,u['tenant_id']); return self._json(b or {'error':'Not found'},200 if b else 404)
             m=re.fullmatch(r'/api/candidates/(\d+)/matches',path)
             if m:
                 cid=int(m.group(1))
                 if u['role'] not in INTERNAL_ROLES and u.get('candidate_id')!=cid: return self._json({'error':'Permission denied'},403)
+                scope_allowed=self._candidate_scope_allows(conn,u,cid)
+                if scope_allowed is None:return self._json({'error':'Not found'},404)
+                if scope_allowed is False:return self._json({'error':'Permission denied'},403)
                 return self._json({'candidate_id':cid,'results':match_jobs_for_candidate(conn,cid,u['tenant_id'])})
             m=re.fullmatch(r'/api/candidate-documents/(\d+)/download',path)
             if m:
