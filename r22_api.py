@@ -126,6 +126,23 @@ LOCALES={
         "interest_registered":"Intérêt enregistré. Le recruteur peut poursuivre votre candidature.",
     },
 
+    "zh":{
+        "label":"中文",
+        "welcome":"欢迎",
+        "subtitle":"搜索开放职位、跟踪您的申请并管理候选人资料。",
+        "language":"语言",
+        "my_applications":"我的申请",
+        "profile_credibility":"资料可信度",
+        "availability":"可入职时间",
+        "active_processes":"个进行中的流程",
+        "open_positions":"开放职位",
+        "apply":"申请 / 感兴趣",
+        "job":"职位",
+        "status":"状态",
+        "submitted":"已提交",
+        "interest_registered":"已登记您的兴趣。招聘人员现在可以继续处理您的候选流程。",
+    },
+
     "hi":{
         "label":"हिन्दी",
         "welcome":"स्वागत है",

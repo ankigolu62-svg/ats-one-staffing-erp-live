@@ -12,10 +12,11 @@ from r18_api import ensure_r18_schema, r18_get, r18_post, r18_patch, r18_delete
 from r19_api import ensure_r19_schema, r19_get, r19_post
 from r22_api import ensure_r22_schema, r22_public_get, r22_get, r22_post
 from r23_rbac import ensure_r23_schema, r23_get, r23_post, r23_permission_denied
+from r23c_candidate import ensure_r23c_schema, r23c_public_get, r23c_public_post, r23c_get, r23c_post
 from persistence_authority import DurabilityError, LeaseConflict, PersistenceError, SchemaPolicy, SnapshotAuthority, SnapshotValidationError, SupabasePostgrestAtomicStore, WriterLease
 
 APP_NAME = "ATS One Staffing ERP"
-APP_VERSION = "7.3.0-r23b-enterprise-rbac"
+APP_VERSION = "7.4.0-r23c-candidate-portal"
 IDENTITY_MODEL = "global-email-primary-tenant"
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
@@ -535,6 +536,7 @@ def migrate_db(conn):
     ensure_r19_schema(conn)
     ensure_r22_schema(conn)
     ensure_r23_schema(conn)
+    ensure_r23c_schema(conn)
 
 def utcnow():
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -1240,6 +1242,7 @@ class Handler(BaseHTTPRequestHandler):
                 if u: u.pop('pass_hash',None); return self._json(u)
                 return
             if r22_public_get(self,conn,path,qs): return
+            if r23c_public_get(self,conn,path,qs): return
             u=self._need(conn)
             if not u: return
             if parity_get(self,conn,u,path,qs): return
@@ -1248,6 +1251,7 @@ class Handler(BaseHTTPRequestHandler):
             if r19_get(self,conn,u,path,qs): return
             if r22_get(self,conn,u,path,qs): return
             if r23_get(self,conn,u,path,qs): return
+            if r23c_get(self,conn,u,path,qs): return
             if path=='/api/dashboard': return self._json(self.dashboard(conn,u))
             if path=='/api/supplier/candidates':
                 if u['role']!='supplier':return self._json({'error':'Permission denied'},403)
@@ -1890,6 +1894,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if data is None:return self._json({'error':getattr(self,'_body_error','Malformed JSON')},400)
             if r14_public_post(self,conn,path,data): return
+            if r23c_public_post(self,conn,path,data): return
             if path=='/api/login':
                 email=(data.get('email') or '').strip().lower();pw=data.get('password') or '';ip=str(self.client_address[0] if self.client_address else '')
                 subject_hash=hashlib.sha256(email.encode()).hexdigest();ip_hash=hashlib.sha256(ip.encode()).hexdigest();attempt=qone(conn,'SELECT * FROM login_attempts WHERE subject_hash=? AND ip_hash=?',(subject_hash,ip_hash));now_dt=datetime.now(timezone.utc)
@@ -1913,6 +1918,7 @@ class Handler(BaseHTTPRequestHandler):
             if r19_post(self,conn,u,path,data): return
             if r22_post(self,conn,u,path,data): return
             if r23_post(self,conn,u,path,data): return
+            if r23c_post(self,conn,u,path,data): return
             if path=='/api/search/talent':
                 if u['role'] not in ('admin','teamlead','recruiter','sales','hr'): return self._json({'error':'Permission denied'},403)
                 data=dict(data);data['_tenant_id']=u['tenant_id']
