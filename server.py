@@ -1238,6 +1238,45 @@ class Handler(BaseHTTPRequestHandler):
               AND t.active=1
             LIMIT 1''',(u['tenant_id'],u['tenant_id'],team_id,owner_id))
         return bool(member)
+    def _r23_permission_flag(self,conn,u,module,flag):
+        token=self._cookies().get('ats_session') or self.headers.get('X-Session-Token')
+        ctx=effective_context(conn,u,token)
+        selected=ctx.get('selected')
+        if not selected:return True
+        permission=next(
+            (
+                item for item in (ctx.get('permissions') or [])
+                if item.get('module')==module
+            ),
+            None
+        )
+        if not permission:return False
+        try:return int(permission.get(flag) or 0)==1
+        except (TypeError,ValueError):return False
+    def _r23_documents_allowed(self,conn,u):
+        return (
+            self._r23_permission_flag(
+                conn,u,'candidate','can_documents'
+            )
+            and
+            self._r23_permission_flag(
+                conn,u,'document','can_documents'
+            )
+        )
+    def _candidate_bundle_for_user(self,conn,u,cid):
+        bundle=candidate_bundle(
+            conn,
+            cid,
+            u['tenant_id']
+        )
+        if (
+            bundle
+            and u['role'] in INTERNAL_ROLES
+            and not self._r23_documents_allowed(conn,u)
+        ):
+            bundle=dict(bundle)
+            bundle['documents']=[]
+        return bundle
     def _need(self, conn, perm=None, roles=None):
         u=self._user(conn)
         if not u: self._json({'error':'Authentication required'},401); return None
@@ -1257,6 +1296,60 @@ class Handler(BaseHTTPRequestHandler):
             urllib.parse.urlparse(self.path).path,
         ):
             self._json({'error':'Permission denied by active profile'},403); return None
+
+        request_path=urllib.parse.urlparse(self.path).path.lower()
+
+        if (
+            module=='invoice'
+            and not self._r23_permission_flag(
+                conn,u,'invoice','can_financial'
+            )
+        ):
+            self._json(
+                {'error':'Financial access denied by active profile'},
+                403
+            )
+            return None
+
+        if (
+            module=='document'
+            and not self._r23_permission_flag(
+                conn,u,'document','can_documents'
+            )
+        ):
+            self._json(
+                {'error':'Document access denied by active profile'},
+                403
+            )
+            return None
+
+        if (
+            module=='candidate'
+            and re.fullmatch(
+                r'/api/candidates/\d+/documents(?:/\d+)?',
+                request_path
+            )
+            and not self._r23_documents_allowed(conn,u)
+        ):
+            self._json(
+                {'error':'Document access denied by active profile'},
+                403
+            )
+            return None
+
+        if (
+            module=='report'
+            and request_path.endswith('/export')
+            and not self._r23_permission_flag(
+                conn,u,'report','can_export'
+            )
+        ):
+            self._json(
+                {'error':'Export denied by active profile'},
+                403
+            )
+            return None
+
         return u
     def _tenant_row(self,conn,table,row_id,u):
         return qone(conn,f'SELECT * FROM {table} WHERE id=? AND tenant_id=?',(row_id,u['tenant_id']))
@@ -1340,7 +1433,7 @@ class Handler(BaseHTTPRequestHandler):
                 scope_allowed=self._candidate_scope_allows(conn,u,cid)
                 if scope_allowed is None:return self._json({'error':'Not found'},404)
                 if scope_allowed is False:return self._json({'error':'Permission denied'},403)
-                b=candidate_bundle(conn,cid,u['tenant_id']); return self._json(b or {'error':'Not found'},200 if b else 404)
+                b=self._candidate_bundle_for_user(conn,u,cid); return self._json(b or {'error':'Not found'},200 if b else 404)
             m=re.fullmatch(r'/api/candidates/(\d+)/matches',path)
             if m:
                 cid=int(m.group(1))
@@ -2029,7 +2122,7 @@ class Handler(BaseHTTPRequestHandler):
                     conn.execute('INSERT OR REPLACE INTO candidate_skills(candidate_id,skill,years,recent,last_used,tenant_id) VALUES(?,?,?,?,?,?)',(cid,s.get('skill'),float(s.get('years') or 0),1 if s.get('recent') else 0,s.get('last_used'),u['tenant_id']))
                 for exp in data.get('experience') or []:
                     conn.execute('INSERT INTO candidate_experience(candidate_id,company,title,start_date,end_date,description,skills,tenant_id) VALUES(?,?,?,?,?,?,?,?)',(cid,exp.get('company'),exp.get('title'),exp.get('start_date'),exp.get('end_date'),exp.get('description'),exp.get('skills'),u['tenant_id']))
-                audit(conn,u['id'],'CREATE','candidate',cid,f"{data.get('first_name')} {data.get('last_name')}",self.client_address[0]); conn.commit(); return self._json(candidate_bundle(conn,cid),201)
+                audit(conn,u['id'],'CREATE','candidate',cid,f"{data.get('first_name')} {data.get('last_name')}",self.client_address[0]); conn.commit(); return self._json(self._candidate_bundle_for_user(conn,u,cid),201)
             m=re.fullmatch(r'/api/candidates/(\d+)/resume/commit',path)
             if m:
                 if u['role'] not in CANDIDATE_EDIT_ROLES:return self._json({'error':'Permission denied'},403)
@@ -2043,7 +2136,7 @@ class Handler(BaseHTTPRequestHandler):
                     conn.execute('INSERT INTO candidate_skills(candidate_id,skill,years,recent,last_used,tenant_id) VALUES(?,?,?,?,?,?) ON CONFLICT(candidate_id,skill) DO UPDATE SET years=excluded.years,recent=excluded.recent,last_used=excluded.last_used',(cid,s['skill'].strip(),float(s.get('years') or 0),1 if s.get('recent') else 0,s.get('last_used'),u['tenant_id']))
                 for exp in reviewed.get('experience') or []:
                     conn.execute('INSERT INTO candidate_experience(candidate_id,company,title,start_date,end_date,description,skills,tenant_id) VALUES(?,?,?,?,?,?,?,?)',(cid,exp.get('company'),exp.get('title'),exp.get('start_date'),exp.get('end_date'),exp.get('description'),exp.get('skills'),u['tenant_id']))
-                audit(conn,u['id'],'RESUME_COMMIT','candidate',cid,'Recruiter-reviewed deterministic parse',self.client_address[0]);conn.commit();return self._json(candidate_bundle(conn,cid,u['tenant_id']))
+                audit(conn,u['id'],'RESUME_COMMIT','candidate',cid,'Recruiter-reviewed deterministic parse',self.client_address[0]);conn.commit();return self._json(self._candidate_bundle_for_user(conn,u,cid))
             m=re.fullmatch(r'/api/candidates/(\d+)/(skills|experience|licenses|certifications|qualifications|attributes|documents)',path)
             if m:
                 if u['role'] not in CANDIDATE_EDIT_ROLES:return self._json({'error':'Permission denied'},403)
