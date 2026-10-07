@@ -10,10 +10,11 @@ from core_policies import PolicyError, assignment_graph, bounded_hours, entity_r
 from r15_migrations import apply_r15_migrations, scan_integrity
 from r18_api import ensure_r18_schema, r18_get, r18_post, r18_patch, r18_delete
 from r19_api import ensure_r19_schema, r19_get, r19_post
+from r22_api import ensure_r22_schema, r22_public_get, r22_get, r22_post
 from persistence_authority import DurabilityError, LeaseConflict, PersistenceError, SchemaPolicy, SnapshotAuthority, SnapshotValidationError, SupabasePostgrestAtomicStore, WriterLease
 
 APP_NAME = "ATS One Staffing ERP"
-APP_VERSION = "7.1.0-r19-functional-parity"
+APP_VERSION = "7.2.0-r22-jobdiva-gap-closure"
 IDENTITY_MODEL = "global-email-primary-tenant"
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
@@ -531,6 +532,7 @@ def migrate_db(conn):
     apply_r15_migrations(conn)
     ensure_r18_schema(conn)
     ensure_r19_schema(conn)
+    ensure_r22_schema(conn)
 
 def utcnow():
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -1226,12 +1228,14 @@ class Handler(BaseHTTPRequestHandler):
                 u=self._need(conn)
                 if u: u.pop('pass_hash',None); return self._json(u)
                 return
+            if r22_public_get(self,conn,path,qs): return
             u=self._need(conn)
             if not u: return
             if parity_get(self,conn,u,path,qs): return
             if r14_get(self,conn,u,path,qs): return
             if r18_get(self,conn,u,path,qs): return
             if r19_get(self,conn,u,path,qs): return
+            if r22_get(self,conn,u,path,qs): return
             if path=='/api/dashboard': return self._json(self.dashboard(conn,u))
             if path=='/api/supplier/candidates':
                 if u['role']!='supplier':return self._json({'error':'Permission denied'},403)
@@ -1895,6 +1899,7 @@ class Handler(BaseHTTPRequestHandler):
             if r14_post(self,conn,u,path,data): return
             if r18_post(self,conn,u,path,data): return
             if r19_post(self,conn,u,path,data): return
+            if r22_post(self,conn,u,path,data): return
             if path=='/api/search/talent':
                 if u['role'] not in ('admin','teamlead','recruiter','sales','hr'): return self._json({'error':'Permission denied'},403)
                 data=dict(data);data['_tenant_id']=u['tenant_id']
