@@ -734,7 +734,10 @@ def r23_permission_denied(
 
     action = "view"
 
-    if method=="POST":
+    # R23_TALENT_SEARCH_VIEW_ACTION
+    if method=="POST" and path=="/api/search/talent":
+        action="view"
+    elif method=="POST":
         action = (
             "approve"
             if any(

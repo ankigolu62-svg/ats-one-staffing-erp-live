@@ -472,9 +472,10 @@ async function r18VmsSync(id){
 
 
 async function pageCommunications(){
+ const canInspectIntegrations=['admin','teamlead'].includes(ME?.role);
  const [rows,connectors]=await Promise.all([
    api('/api/communications'),
-   api('/api/integrations').catch(()=>[])
+   canInspectIntegrations ? api('/api/integrations').catch(()=>[]) : Promise.resolve([])
  ]);
 
  const providers=connectors.filter(

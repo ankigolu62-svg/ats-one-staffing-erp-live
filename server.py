@@ -1189,7 +1189,7 @@ class Handler(BaseHTTPRequestHandler):
         return qone(conn,'''SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id AND u.tenant_id=s.tenant_id WHERE s.token=? AND s.expires_at>? AND u.active=1''',(tok,utcnow()))
     def _permission_module(self):
         path=urllib.parse.urlparse(self.path).path.lower()
-        mapping=[('/api/candidate-documents','document'),('/api/assessments','assessment'),('/api/candidates','candidate'),('/api/jobs','job'),('/api/submissions','submission'),('/api/interviews','interview'),('/api/onboarding','onboarding'),('/api/assignments','assignment'),('/api/timesheets','timesheet'),('/api/expenses','expense'),('/api/invoices','invoice'),('/api/companies','crm'),('/api/contacts','crm'),('/api/leads','crm'),('/api/opportunities','crm'),('/api/reports','report'),('/api/communications','communication'),('/api/hotlists','hotlist'),('/api/vms','vms'),('/api/suppliers','supplier'),('/api/r14','r14')]
+        mapping=[('/api/purchase-orders','finance'),('/api/search/talent','talent'),('/api/candidate-documents','document'),('/api/assessments','assessment'),('/api/candidates','candidate'),('/api/jobs','job'),('/api/submissions','submission'),('/api/interviews','interview'),('/api/onboarding','onboarding'),('/api/assignments','assignment'),('/api/timesheets','timesheet'),('/api/expenses','expense'),('/api/invoices','invoice'),('/api/companies','crm'),('/api/contacts','crm'),('/api/leads','crm'),('/api/opportunities','crm'),('/api/reports','report'),('/api/communications','communication'),('/api/hotlists','hotlist'),('/api/vms','vms'),('/api/suppliers','supplier'),('/api/r14','r14')]
         return next((module for prefix,module in mapping if path.startswith(prefix)),None)
     def _r23_data_scope(self,conn,u,module):
         token=self._cookies().get('ats_session') or self.headers.get('X-Session-Token')
@@ -1301,7 +1301,7 @@ class Handler(BaseHTTPRequestHandler):
         module=perm or self._permission_module()
         if module and permission_denied_by_override(conn,u['tenant_id'],u['role'],module,self.command):
             self._json({'error':'Permission denied by tenant policy'},403); return None
-        if module and r23_permission_denied(
+        if module and u['role'] in INTERNAL_ROLES and r23_permission_denied(
             conn,
             u,
             self._cookies().get('ats_session') or self.headers.get('X-Session-Token'),
@@ -1327,6 +1327,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if (
             module=='document'
+            and u['role'] in INTERNAL_ROLES
             and not self._r23_permission_flag(
                 conn,u,'document','can_documents'
             )
@@ -1433,6 +1434,20 @@ class Handler(BaseHTTPRequestHandler):
                         403
                     )
                     return None
+
+        # R23_FINANCE_MODULE_RUNTIME_GATE
+        if (
+            module=='finance'
+            and u['role'] in INTERNAL_ROLES
+            and not self._r23_permission_flag(
+                conn,u,'finance','can_financial'
+            )
+        ):
+            self._json(
+                {'error':'Financial access denied by active profile'},
+                403
+            )
+            return None
 
         return u
     def _tenant_row(self,conn,table,row_id,u):

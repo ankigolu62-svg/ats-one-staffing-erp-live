@@ -40,6 +40,40 @@ function r23RouteModule(route){
   })[route];
 }
 
+function r23PermissionAllowed(p,module){
+  if(!p || Number(p.can_view)!==1)return false;
+  if(module==='finance' && Number(p.can_financial)!==1)return false;
+  if(module==='admin' && Number(p.can_admin)!==1)return false;
+  return true;
+}
+
+const R23_PRE_PERMISSION_ROUTE=route;
+
+route=async function(r){
+  const base=String(r||'').split('/')[0];
+
+  if(internalRoles.includes(ME?.role)){
+    const module=r23RouteModule(base);
+
+    if(module){
+      const ctx=await r23LoadContext();
+      const p=(ctx?.permissions||[]).find(x=>x.module===module);
+
+      if(!r23PermissionAllowed(p,module)){
+        CURRENT=r;
+        $$('.navitem').forEach(n=>n.classList.toggle('active',n.dataset.route===r));
+        const c=$('#content');
+        if(c){
+          c.innerHTML=`<div class="page"><div class="panel"><div class="panel-body"><b>Permission denied</b><br>This module is not available under the active enterprise profile.</div></div></div>`;
+        }
+        return;
+      }
+    }
+  }
+
+  return R23_PRE_PERMISSION_ROUTE(r);
+};
+
 async function r23EnhanceShell(){
   const ctx = await r23LoadContext();
   if(!ctx) return;
@@ -62,7 +96,7 @@ async function r23EnhanceShell(){
     const module=r23RouteModule(route);
     if(!module) return;
     const p=perms.get(module);
-    if(!p || Number(p.can_view)!==1){
+    if(!r23PermissionAllowed(p,module)){
       el.style.display='none';
     }
   });

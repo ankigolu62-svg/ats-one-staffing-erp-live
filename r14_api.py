@@ -640,11 +640,15 @@ def r14_get(h,conn,u,path,qs):
  m=re.fullmatch(r"/api/r14/([a-z-]+)",path)
  if m and m.group(1) in RESOURCE:
   slug=m.group(1);table,roles,_=RESOURCE[slug]
-  if u["role"] not in roles:return send(h,{"error":"Permission denied"},403)
+  candidate_self_read=(u["role"]=="candidate" and slug in {"candidate-eeo","employment-verifications"})
+  supplier_self_read=(u["role"]=="supplier" and slug in {"supplier-contracts","supplier-scorecards","supplier-compliance"})
+  if u["role"] not in roles and not candidate_self_read and not supplier_self_read:return send(h,{"error":"Permission denied"},403)
   sql=f"SELECT * FROM {table} WHERE tenant_id=?";params=[tid]
   # Role scoping for worker/client resources
   if slug in {"pto-requests","pay-statements"} and u["role"]=="worker":sql+=" AND candidate_id=?";params.append(int(u.get("candidate_id") or 0))
   if slug=="requisition-requests" and u["role"]=="client":sql+=" AND company_id=?";params.append(int(u.get("company_id") or 0))
+  if candidate_self_read:sql+=" AND candidate_id=?";params.append(int(u.get("candidate_id") or 0))
+  if supplier_self_read:sql+=" AND supplier_id=?";params.append(int(u.get("supplier_id") or 0))
   sql+=" ORDER BY id DESC LIMIT 1000";data=_decorate_configuration_only(slug,rows(conn,sql,params))
   if slug in {"candidate-eeo","candidate-hr","candidate-privacy"}:
    audit(conn,u,"READ",table,None,"collection");conn.commit()

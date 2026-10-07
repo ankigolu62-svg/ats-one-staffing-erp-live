@@ -354,6 +354,8 @@ async function(){
 
 async function r23dReportsPanels(){
 
+  const canProfitability=['admin','teamlead','finance'].includes(ME?.role);
+
   const [
     leaderboard,
     profitability
@@ -363,9 +365,11 @@ async function r23dReportsPanels(){
         '/api/r23d/recruiting-leaderboard'
       ),
 
-      api(
-        '/api/r23d/profitability'
-      )
+      canProfitability
+        ? api(
+            '/api/r23d/profitability'
+          )
+        : Promise.resolve(null)
     ]);
 
 
@@ -406,6 +410,11 @@ async function r23dReportsPanels(){
       </div>
       `
     );
+
+
+  if(!profitability){
+    return leaderHtml;
+  }
 
 
   const profitHtml=

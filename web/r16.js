@@ -535,7 +535,7 @@ function r16FilterJobRows(v){$$('#r16JobGrid tr[data-status]').forEach(tr=>tr.st
 
 /* ---------------- Engagement pages ---------------- */
 async function pageR16CompanyCalendar(){
- const [ints,companies]=await Promise.all([api('/api/interviews'),api('/api/companies')]);
+ const ints=await api('/api/interviews');
  $('#content').innerHTML=`<div class="page">${head('Company Calendars','Engagement › Company Calendars')}${panel('Company Interview Calendar',`<table class="grid"><tr><th>Date</th><th>Company</th><th>Candidate</th><th>Job</th><th>Status</th></tr>${ints.map(x=>`<tr><td>${x.scheduled_at?new Date(x.scheduled_at).toLocaleString():''}</td><td>${esc(x.company_name||'')}</td><td>${esc((x.first_name||'')+' '+(x.last_name||''))}</td><td>${esc(x.job_no||'')} ${esc(x.job_title||'')}</td><td>${status(x.status)}</td></tr>`).join('')}</table>`)}</div>`;
 }
 async function pageR16JobCalendar(){
@@ -555,6 +555,7 @@ route = async function(r){
  const base=String(r||'').split('/')[0];
  const custom={
   jobs:pageJobs,
+  employees:pageAssignments,
   companyCalendarR16:pageR16CompanyCalendar,
   jobCalendarR16:pageR16JobCalendar,
   eInterviewR16:pageR16EInterview,
